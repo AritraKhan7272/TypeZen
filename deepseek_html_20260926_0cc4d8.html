@@ -1,0 +1,3507 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TypeZen — Practice. Improve. Master.</title>
+<meta name="description" content="Build faster, more accurate typing skills with personalized practice, intelligent feedback and detailed performance analytics." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⌨️</text></svg>" />
+<style>
+/* ============================================================
+   TYPEZEN — DESIGN TOKENS
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --accent:#7c5cff;
+  --accent-2:#22d3ee;
+  --radius:16px;
+  --radius-sm:10px;
+  --font-sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,'Courier New',monospace;
+  --type-size:30px;
+  --speed:.18s;
+}
+[data-theme="dark"]{
+  --bg:#080b12; --bg-soft:#0d121c; --surface:#111726; --surface-2:#182034;
+  --border:#232d44; --border-soft:#1a2334;
+  --text:#e9edf7; --text-dim:#b9c2d6; --muted:#7d89a4;
+  --correct:#4ee6a8; --wrong:#ff5f70; --pending:#455066;
+  --shadow:0 18px 50px -20px rgba(0,0,0,.85);
+  --glow:0 0 40px -10px var(--accent);
+}
+[data-theme="light"]{
+  --bg:#f4f6fc; --bg-soft:#eaeef8; --surface:#ffffff; --surface-2:#f3f6fd;
+  --border:#e2e8f5; --border-soft:#eef2fa;
+  --text:#101526; --text-dim:#39415a; --muted:#6d7896;
+  --correct:#0f9d63; --wrong:#e03b4d; --pending:#aab3c8;
+  --shadow:0 18px 45px -22px rgba(30,45,90,.35);
+  --glow:0 0 40px -14px var(--accent);
+}
+[data-theme="oled"]{
+  --bg:#000000; --bg-soft:#050505; --surface:#0a0a0c; --surface-2:#121216;
+  --border:#1d1d22; --border-soft:#141418;
+  --text:#f2f4f8; --text-dim:#c2c8d4; --muted:#767f92;
+  --correct:#4ee6a8; --wrong:#ff5f70; --pending:#3a4150;
+  --shadow:0 18px 50px -20px rgba(0,0,0,1);
+  --glow:0 0 40px -10px var(--accent);
+}
+[data-theme="nord"]{
+  --bg:#2e3440; --bg-soft:#343b48; --surface:#3b4252; --surface-2:#434c5e;
+  --border:#4c566a; --border-soft:#434c5e;
+  --text:#eceff4; --text-dim:#d8dee9; --muted:#9aa5b8;
+  --correct:#a3be8c; --wrong:#bf616a; --pending:#5d6879;
+  --shadow:0 18px 50px -20px rgba(0,0,0,.6);
+  --glow:0 0 40px -10px var(--accent);
+}
+
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--font-sans);
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+  transition:background .35s ease,color .35s ease;
+}
+body.focus-mode .nav,body.focus-mode footer,body.focus-mode .bg-orbs{display:none}
+body.focus-mode .view{padding-top:20px}
+
+/* background orbs */
+.bg-orbs{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.bg-orbs::before,.bg-orbs::after{
+  content:'';position:absolute;border-radius:50%;filter:blur(120px);opacity:.28;
+}
+.bg-orbs::before{width:620px;height:620px;background:var(--accent);top:-260px;left:-180px}
+.bg-orbs::after{width:520px;height:520px;background:var(--accent-2);top:20%;right:-220px;opacity:.18}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.container{width:100%;max-width:1220px;margin:0 auto;padding:0 22px;position:relative;z-index:1}
+.view{display:none;padding:34px 0 90px;position:relative;z-index:1;animation:fadeUp .35s ease}
+.view.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+.section{padding:76px 0}
+.section-head{text-align:center;max-width:660px;margin:0 auto 44px}
+.section-head h2{font-size:clamp(26px,3.4vw,40px);letter-spacing:-.02em;line-height:1.15}
+.section-head p{color:var(--muted);margin-top:12px;font-size:16px;line-height:1.65}
+.grad{background:linear-gradient(120deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:14px
+}
+
+/* ============================================================
+   NAVBAR
+   ============================================================ */
+.nav{
+  position:sticky;top:0;z-index:80;
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  background:color-mix(in srgb,var(--bg) 78%,transparent);
+  border-bottom:1px solid var(--border-soft);
+}
+.nav-inner{
+  max-width:1320px;margin:0 auto;padding:11px 22px;
+  display:flex;align-items:center;gap:16px;
+}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);cursor:pointer;flex-shrink:0}
+.brand-mark{
+  width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:16px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;
+  box-shadow:0 6px 18px -6px var(--accent);
+}
+.brand-text{font-weight:800;letter-spacing:.1em;font-size:15px}
+.brand-text em{font-style:normal;background:linear-gradient(120deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.nav-links{display:flex;align-items:center;gap:2px;margin-left:14px;flex:1}
+.nav-link{
+  color:var(--muted);text-decoration:none;font-size:13.5px;font-weight:600;
+  padding:8px 13px;border-radius:9px;cursor:pointer;transition:var(--speed);white-space:nowrap;
+}
+.nav-link:hover{color:var(--text);background:var(--surface-2)}
+.nav-link.active{color:var(--text);background:var(--surface-2)}
+.nav-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+.icon-btn{
+  width:36px;height:36px;border-radius:10px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);cursor:pointer;font-size:14px;
+  display:grid;place-items:center;transition:var(--speed)
+}
+.icon-btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+.streak-chip{
+  display:flex;align-items:center;gap:6px;height:36px;padding:0 13px;border-radius:10px;
+  background:linear-gradient(135deg,rgba(255,140,60,.16),rgba(255,80,120,.14));
+  border:1px solid rgba(255,140,60,.35);color:var(--text);font-size:13px;font-weight:700;
+  cursor:pointer;transition:var(--speed)
+}
+.streak-chip:hover{transform:translateY(-1px)}
+.hamburger{display:none}
+
+/* avatar */
+.avatar-menu{position:relative}
+.avatar{
+  width:36px;height:36px;border-radius:50%;border:2px solid var(--accent);
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;
+  font-weight:800;font-size:14px;cursor:pointer;display:grid;place-items:center;
+  background-size:cover;background-position:center;
+}
+.dropdown{
+  position:absolute;right:0;top:46px;min-width:186px;padding:7px;
+  background:var(--surface);border:1px solid var(--border);border-radius:13px;
+  box-shadow:var(--shadow);display:none;flex-direction:column;gap:2px;z-index:90
+}
+.dropdown.open{display:flex;animation:fadeUp .18s ease}
+.dropdown a{
+  padding:9px 12px;border-radius:8px;color:var(--text-dim);font-size:13.5px;font-weight:600;
+  cursor:pointer;text-decoration:none;transition:var(--speed)
+}
+.dropdown a:hover{background:var(--surface-2);color:var(--text)}
+.dropdown hr{border:none;border-top:1px solid var(--border);margin:4px 0}
+
+/* ============================================================
+   BUTTONS / CARDS / FORMS
+   ============================================================ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px 20px;border-radius:11px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font:inherit;font-size:14px;font-weight:650;
+  cursor:pointer;transition:var(--speed);white-space:nowrap;text-decoration:none
+}
+.btn:hover{background:var(--surface-2);border-color:var(--accent);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn.primary{
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));border:none;color:#fff;
+  box-shadow:0 10px 28px -12px var(--accent)
+}
+.btn.primary:hover{filter:brightness(1.09)}
+.btn.lg{padding:14px 26px;font-size:15px;border-radius:13px}
+.btn.sm{padding:7px 13px;font-size:12.5px;border-radius:9px}
+.btn.ghost{background:transparent}
+.btn.danger{border-color:var(--wrong);color:var(--wrong)}
+.btn.danger:hover{background:color-mix(in srgb,var(--wrong) 14%,transparent)}
+.btn[disabled]{opacity:.45;pointer-events:none}
+
+.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:22px;box-shadow:var(--shadow);transition:var(--speed)
+}
+.card.hoverable:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--accent) 45%,var(--border))}
+.grid{display:grid;gap:18px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:960px){.g3,.g4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.g2,.g3,.g4{grid-template-columns:1fr}}
+
+input,select,textarea{
+  width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--border);
+  background:var(--bg-soft);color:var(--text);font:inherit;font-size:14px;outline:none;transition:var(--speed)
+}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+label{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:7px;letter-spacing:.02em}
+.field{margin-bottom:15px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+
+/* chips */
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{
+  padding:7px 14px;border-radius:999px;border:1px solid var(--border);background:var(--surface);
+  color:var(--muted);font-size:13px;font-weight:650;cursor:pointer;transition:var(--speed);user-select:none
+}
+.chip:hover{color:var(--text);border-color:var(--accent)}
+.chip.active{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
+.chip.sm{padding:5px 11px;font-size:12px}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero{padding:70px 0 40px}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
+@media(max-width:980px){.hero-grid{grid-template-columns:1fr;gap:40px}}
+.pill{
+  display:inline-flex;align-items:center;gap:8px;padding:7px 15px;border-radius:999px;
+  background:color-mix(in srgb,var(--accent) 13%,transparent);
+  border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);
+  color:var(--text-dim);font-size:12.5px;font-weight:650;margin-bottom:22px
+}
+.hero h1{font-size:clamp(38px,5.6vw,66px);line-height:1.04;letter-spacing:-.035em;font-weight:800}
+.hero .lead{margin-top:20px;font-size:17px;line-height:1.7;color:var(--muted);max-width:540px}
+.hero-cta{display:flex;gap:13px;margin-top:32px;flex-wrap:wrap}
+.hero-stats{display:flex;gap:34px;margin-top:44px;flex-wrap:wrap}
+.hero-stats div{display:flex;flex-direction:column}
+.hero-stats b{font-size:26px;letter-spacing:-.02em;font-family:var(--font-mono)}
+.hero-stats span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;margin-top:3px;font-weight:600}
+
+/* quick practice card */
+.qp-card{padding:26px;position:relative;overflow:hidden}
+.qp-card::before{
+  content:'';position:absolute;inset:-1px;border-radius:inherit;padding:1px;
+  background:linear-gradient(140deg,var(--accent),transparent 45%,var(--accent-2));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;opacity:.7
+}
+.qp-title{font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+.qp-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.qp-stat{background:var(--bg-soft);border:1px solid var(--border-soft);border-radius:12px;padding:14px;text-align:center}
+.qp-stat b{display:block;font-family:var(--font-mono);font-size:26px;color:var(--text);letter-spacing:-.02em}
+.qp-stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:700}
+.qp-demo{font-family:var(--font-mono);font-size:14px;line-height:1.9;color:var(--pending);margin-bottom:20px;min-height:52px}
+.qp-demo .c{color:var(--correct)}
+.qp-demo .w{color:var(--wrong)}
+
+/* ============================================================
+   TYPING ENGINE UI
+   ============================================================ */
+.practice-shell{display:grid;grid-template-columns:1fr;gap:18px}
+.toolbar{
+  display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:12px 16px;box-shadow:var(--shadow)
+}
+.toolbar .sep{width:1px;height:24px;background:var(--border);margin:0 2px}
+.toolbar-group{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.toolbar-label{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+
+.statbar{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
+}
+@media(max-width:700px){.statbar{grid-template-columns:repeat(2,1fr)}}
+.stat{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 18px;
+  display:flex;flex-direction:column;gap:3px;position:relative;overflow:hidden
+}
+.stat::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(var(--accent),var(--accent-2));opacity:.85}
+.stat b{font-family:var(--font-mono);font-size:28px;letter-spacing:-.03em;line-height:1.15}
+.stat span{font-size:11px;text-transform:uppercase;letter-spacing:.11em;color:var(--muted);font-weight:750}
+
+.typing-wrap{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:30px 34px;box-shadow:var(--shadow);position:relative;overflow:hidden
+}
+.typing-area{
+  font-family:var(--font-mono);font-size:var(--type-size);line-height:1.75;
+  height:calc(1.75em * 3);overflow:hidden;position:relative;user-select:none;cursor:text;
+  -webkit-mask-image:linear-gradient(180deg,#000 0,#000 76%,transparent 100%);
+  mask-image:linear-gradient(180deg,#000 0,#000 76%,transparent 100%)
+}
+.typing-words{transition:transform .22s cubic-bezier(.4,0,.2,1);will-change:transform}
+.word{display:inline-block;margin:0 .55ch;position:relative;white-space:nowrap}
+.word.blurred{filter:blur(4px);opacity:.5}
+.letter{color:var(--pending);transition:color .06s linear;position:relative}
+.letter.correct{color:var(--text)}
+.letter.wrong{color:var(--wrong);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+.letter.extra{color:var(--wrong);opacity:.75}
+.letter.cur::before{
+  content:'';position:absolute;left:-1.5px;top:.1em;bottom:.1em;width:2.5px;border-radius:2px;
+  background:var(--accent);animation:blink 1.05s steps(1,end) infinite
+}
+.word.cur-end::after{
+  content:'';position:absolute;right:-3px;top:.1em;bottom:.1em;width:2.5px;border-radius:2px;
+  background:var(--accent);animation:blink 1.05s steps(1,end) infinite
+}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+.typing-overlay{
+  position:absolute;inset:0;display:none;place-items:center;background:color-mix(in srgb,var(--surface) 88%,transparent);
+  backdrop-filter:blur(6px);z-index:5;text-align:center;padding:20px;border-radius:var(--radius)
+}
+.typing-overlay.show{display:grid}
+.typing-overlay h3{font-size:22px;margin-bottom:8px}
+.typing-overlay p{color:var(--muted);margin-bottom:18px;font-size:14px}
+
+/* virtual keyboard */
+.kb{display:flex;flex-direction:column;gap:6px;align-items:center;margin-top:26px;user-select:none}
+.kb-row{display:flex;gap:6px}
+.key{
+  min-width:42px;height:42px;padding:0 9px;border-radius:9px;
+  background:var(--surface-2);border:1px solid var(--border);
+  display:grid;place-items:center;font-family:var(--font-mono);font-size:13px;
+  color:var(--muted);transition:transform .07s,background .1s,color .1s;
+  border-bottom-width:2px;position:relative
+}
+.key.wide{min-width:66px}
+.key.space{min-width:270px}
+.key.active{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent;transform:translateY(2px)}
+.key.next{box-shadow:0 0 0 2px var(--accent) inset;color:var(--accent);font-weight:800}
+.key.weak{color:var(--wrong);border-color:color-mix(in srgb,var(--wrong) 55%,var(--border))}
+.kb-hidden{display:none}
+.f-lp{border-bottom-color:#ff6b8a}.f-lr{border-bottom-color:#ffa552}.f-lm{border-bottom-color:#ffd93d}
+.f-li{border-bottom-color:#5ce1a5}.f-ri{border-bottom-color:#4ecdc4}.f-rm{border-bottom-color:#4aa8ff}
+.f-rr{border-bottom-color:#a97bff}.f-rp{border-bottom-color:#e879f9}
+
+/* ============================================================
+   REPORT / MODALS
+   ============================================================ */
+.modal-backdrop{
+  position:fixed;inset:0;background:rgba(3,6,14,.72);backdrop-filter:blur(8px);
+  z-index:200;display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto
+}
+.modal-backdrop.open{display:flex}
+.modal{
+  background:var(--surface);border:1px solid var(--border);border-radius:20px;
+  width:100%;max-width:600px;padding:32px;box-shadow:var(--shadow);
+  animation:pop .28s cubic-bezier(.2,1.3,.4,1);max-height:92vh;overflow-y:auto
+}
+@keyframes pop{from{opacity:0;transform:scale(.94) translateY(14px)}to{opacity:1;transform:none}}
+.modal.wide{max-width:760px}
+.modal h2{font-size:24px;letter-spacing:-.02em;margin-bottom:6px}
+.modal .sub{color:var(--muted);font-size:14px;margin-bottom:24px}
+.report-hero{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px}
+.report-big{
+  background:var(--bg-soft);border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center
+}
+.report-big b{display:block;font-family:var(--font-mono);font-size:44px;letter-spacing:-.04em;line-height:1}
+.report-big span{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:750}
+.report-rows{display:grid;gap:1px;background:var(--border);border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+.report-row{display:flex;justify-content:space-between;padding:12px 16px;background:var(--surface);font-size:14px}
+.report-row span{color:var(--muted);font-weight:600}
+.report-row b{font-family:var(--font-mono);font-weight:600}
+.delta-pos{color:var(--correct)}.delta-neg{color:var(--wrong)}
+
+/* ============================================================
+   MISC COMPONENTS
+   ============================================================ */
+.badge{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+  font-size:11px;font-weight:750;letter-spacing:.05em;background:var(--surface-2);
+  border:1px solid var(--border);color:var(--muted)
+}
+.badge.green{color:var(--correct);border-color:color-mix(in srgb,var(--correct) 40%,transparent);background:color-mix(in srgb,var(--correct) 10%,transparent)}
+.badge.purple{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.badge.amber{color:#ffb648;border-color:rgba(255,182,72,.4);background:rgba(255,182,72,.1)}
+
+.progress{height:9px;border-radius:999px;background:var(--bg-soft);overflow:hidden;border:1px solid var(--border-soft)}
+.progress > i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .5s ease}
+
+.ach{
+  display:flex;gap:14px;align-items:center;padding:15px;border-radius:14px;
+  background:var(--surface);border:1px solid var(--border);transition:var(--speed)
+}
+.ach.locked{opacity:.42;filter:grayscale(1)}
+.ach.unlocked{border-color:color-mix(in srgb,var(--accent) 42%,var(--border))}
+.ach .ico{font-size:26px;width:46px;height:46px;display:grid;place-items:center;border-radius:12px;background:var(--bg-soft);flex-shrink:0}
+.ach b{display:block;font-size:14px}
+.ach small{color:var(--muted);font-size:12.5px;line-height:1.45;display:block;margin-top:2px}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{
+  text-align:left;font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);
+  font-weight:800;padding:12px 14px;border-bottom:1px solid var(--border)
+}
+td{padding:13px 14px;border-bottom:1px solid var(--border-soft)}
+tbody tr:hover{background:var(--surface-2)}
+tbody tr.me{background:color-mix(in srgb,var(--accent) 11%,transparent)}
+tbody tr.me td{font-weight:700}
+
+canvas.chart{width:100%;height:220px;display:block}
+
+.list-row{
+  display:flex;align-items:center;gap:14px;padding:14px;border-radius:13px;
+  background:var(--surface);border:1px solid var(--border);transition:var(--speed);cursor:pointer
+}
+.list-row:hover{border-color:var(--accent);transform:translateX(3px)}
+.list-row .n{
+  width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;
+  background:var(--surface-2);font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--muted)
+}
+
+.empty{
+  text-align:center;padding:48px 20px;color:var(--muted);font-size:14px;
+  border:1px dashed var(--border);border-radius:var(--radius)
+}
+.empty .big{font-size:36px;display:block;margin-bottom:10px;opacity:.6}
+
+/* toast */
+#toasts{position:fixed;right:20px;bottom:20px;z-index:400;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+.toast{
+  background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);
+  border-radius:12px;padding:14px 18px;box-shadow:var(--shadow);min-width:270px;max-width:340px;
+  animation:slideIn .3s cubic-bezier(.2,1.2,.4,1);font-size:13.5px
+}
+@keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+.toast b{display:block;font-size:13.5px;margin-bottom:2px}
+.toast small{color:var(--muted);font-size:12.5px;line-height:1.5}
+
+/* FAQ */
+details.faq{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:0;margin-bottom:11px;overflow:hidden;transition:var(--speed)
+}
+details.faq[open]{border-color:color-mix(in srgb,var(--accent) 42%,var(--border))}
+details.faq summary{
+  padding:18px 22px;cursor:pointer;font-weight:650;font-size:15px;list-style:none;
+  display:flex;justify-content:space-between;align-items:center;gap:14px
+}
+details.faq summary::-webkit-details-marker{display:none}
+details.faq summary::after{content:'+';font-size:20px;color:var(--accent);font-weight:400;transition:.25s}
+details.faq[open] summary::after{transform:rotate(45deg)}
+details.faq p{padding:0 22px 20px;color:var(--muted);line-height:1.7;font-size:14.5px}
+
+/* testimonials */
+.quote-card{position:relative}
+.quote-card::before{
+  content:'"';position:absolute;top:6px;right:20px;font-size:78px;line-height:1;
+  color:var(--accent);opacity:.15;font-family:Georgia,serif
+}
+.quote-card p{line-height:1.7;font-size:14.5px;color:var(--text-dim);margin-bottom:16px}
+.who{display:flex;align-items:center;gap:11px}
+.who .av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;font-size:14px}
+.who b{display:block;font-size:13.5px}
+.who small{color:var(--muted);font-size:12px}
+
+/* footer */
+footer{border-top:1px solid var(--border-soft);padding:56px 0 34px;margin-top:40px;position:relative;z-index:1}
+.foot-grid{display:grid;grid-template-columns:1.6fr repeat(3,1fr);gap:36px;margin-bottom:38px}
+@media(max-width:780px){.foot-grid{grid-template-columns:1fr 1fr}}
+.foot-grid h4{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:15px;font-weight:800}
+.foot-grid a{display:block;color:var(--text-dim);text-decoration:none;font-size:13.5px;padding:5px 0;cursor:pointer;transition:var(--speed)}
+.foot-grid a:hover{color:var(--accent)}
+.foot-bottom{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-top:26px;border-top:1px solid var(--border-soft);color:var(--muted);font-size:12.5px}
+
+/* games */
+.game-stage{
+  position:relative;height:440px;border-radius:var(--radius);overflow:hidden;
+  background:radial-gradient(circle at 50% 0%,color-mix(in srgb,var(--accent) 14%,var(--bg-soft)),var(--bg-soft));
+  border:1px solid var(--border)
+}
+.falling{
+  position:absolute;font-family:var(--font-mono);font-size:19px;font-weight:600;padding:6px 12px;
+  border-radius:9px;background:var(--surface);border:1px solid var(--border);color:var(--text);
+  white-space:nowrap;transition:border-color .1s,color .1s
+}
+.falling.hit{border-color:var(--accent);color:var(--accent);box-shadow:0 0 22px -4px var(--accent)}
+.falling.danger{border-color:var(--wrong);color:var(--wrong)}
+.game-hud{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.ground{position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,transparent,var(--wrong),transparent)}
+
+/* course / lesson */
+.lesson{
+  display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:12px;
+  background:var(--surface);border:1px solid var(--border);cursor:pointer;transition:var(--speed)
+}
+.lesson:hover{border-color:var(--accent);transform:translateX(3px)}
+.lesson .tick{
+  width:24px;height:24px;border-radius:50%;border:2px solid var(--border);
+  display:grid;place-items:center;font-size:11px;flex-shrink:0;color:transparent
+}
+.lesson.done .tick{background:var(--correct);border-color:var(--correct);color:#04120c}
+
+.kbd-cap{
+  display:inline-block;padding:2px 7px;border-radius:6px;background:var(--surface-2);
+  border:1px solid var(--border);border-bottom-width:2px;font-family:var(--font-mono);
+  font-size:12px;color:var(--text-dim)
+}
+.hint{font-size:12.5px;color:var(--muted);line-height:1.6}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+
+@media(max-width:900px){
+  .nav-links{
+    position:fixed;top:58px;left:0;right:0;background:var(--surface);flex-direction:column;
+    padding:14px;gap:4px;border-bottom:1px solid var(--border);display:none;z-index:70;
+    box-shadow:var(--shadow);align-items:stretch
+  }
+  .nav-links.open{display:flex}
+  .nav-link{padding:12px 14px}
+  .hamburger{display:grid}
+  .typing-wrap{padding:20px 16px}
+  .key{min-width:30px;height:38px;font-size:11px}
+  .key.space{min-width:150px}
+  .kb-row{gap:4px}
+}
+</style>
+</head>
+<body>
+<div class="bg-orbs"></div>
+
+<!-- ============================ NAVBAR ============================ -->
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" data-view="landing">
+      <span class="brand-mark">⌨</span>
+      <span class="brand-text">TYPE<em>ZEN</em></span>
+    </a>
+
+    <nav class="nav-links" id="navLinks">
+      <a class="nav-link" data-view="practice">Practice</a>
+      <a class="nav-link" data-view="test">Tests</a>
+      <a class="nav-link" data-view="games">Games</a>
+      <a class="nav-link" data-view="courses">Courses</a>
+      <a class="nav-link" data-view="analytics">Analytics</a>
+      <a class="nav-link" data-view="leaderboard">Leaderboard</a>
+      <a class="nav-link" data-view="dashboard">Dashboard</a>
+    </nav>
+
+    <div class="nav-right">
+      <button class="streak-chip" id="streakChip" title="Daily streak">🔥 <b id="streakNum">0</b></button>
+      <button class="icon-btn" id="themeBtn" title="Switch theme">🌙</button>
+      <button class="icon-btn" id="soundBtn" title="Toggle key sounds">🔊</button>
+      <button class="btn primary sm" id="authBtn">Login</button>
+      <div class="avatar-menu" id="avatarMenu" hidden>
+        <button class="avatar" id="avatarBtn">A</button>
+        <div class="dropdown" id="avatarDrop">
+          <a data-view="dashboard">Dashboard</a>
+          <a data-view="profile">Profile</a>
+          <a data-view="analytics">Analytics</a>
+          <a data-view="settings">Settings</a>
+          <hr />
+          <a id="logoutBtn">Log out</a>
+        </div>
+      </div>
+      <button class="icon-btn hamburger" id="hamburger">☰</button>
+    </div>
+  </div>
+</header>
+
+<!-- ============================ LANDING ============================ -->
+<section class="view active" id="view-landing">
+  <div class="hero">
+    <div class="container hero-grid">
+      <div>
+        <div class="pill">✨ Personalized typing intelligence</div>
+        <h1>Practice. Improve.<br /><span class="grad">Master.</span></h1>
+        <p class="lead">
+          Build faster, more accurate typing skills with personalized practice,
+          intelligent feedback and detailed performance analytics.
+        </p>
+        <div class="hero-cta">
+          <button class="btn primary lg" data-view="practice">⌨️ Start Typing</button>
+          <button class="btn lg" data-view="test">🏁 Take a Test</button>
+        </div>
+        <div class="hero-stats">
+          <div><b id="heroBest">0</b><span>Best WPM</span></div>
+          <div><b id="heroAcc">0%</b><span>Best Accuracy</span></div>
+          <div><b id="heroStreak">0</b><span>Day Streak</span></div>
+          <div><b id="heroWords">0</b><span>Words Typed</span></div>
+        </div>
+      </div>
+
+      <div class="card qp-card">
+        <div class="qp-title">Quick Practice</div>
+        <div class="qp-stats">
+          <div class="qp-stat"><b id="qpWpm">0</b><span>WPM</span></div>
+          <div class="qp-stat"><b id="qpAcc">0%</b><span>Accuracy</span></div>
+          <div class="qp-stat"><b id="qpTime">1:00</b><span>Time</span></div>
+        </div>
+        <div class="qp-demo" id="qpDemo">
+          <span class="c">typezen</span> <span class="c">helps</span> you <span class="w">master</span> the keyboard with
+          <span class="c">personalized</span> drills and analytics.
+        </div>
+        <div class="chips" id="qpChips">
+          <span class="chip active" data-sec="30">30 sec</span>
+          <span class="chip" data-sec="60">1 min</span>
+          <span class="chip" data-sec="120">2 min</span>
+          <span class="chip" data-sec="300">5 min</span>
+        </div>
+        <button class="btn primary lg" style="width:100%;margin-top:18px" id="qpStart">Start Practice →</button>
+        <p class="hint" style="margin-top:12px;text-align:center">Tip: press <span class="kbd-cap">Tab</span> during a session to restart.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Why TypeZen -->
+  <div class="section">
+    <div class="container">
+      <div class="section-head">
+        <div class="eyebrow">Why TypeZen</div>
+        <h2>Everything a serious typist needs — in one place</h2>
+        <p>Not just another typing test. TypeZen studies how you type and builds a training plan around your weak spots.</p>
+      </div>
+      <div class="grid g3">
+        <div class="card hoverable"><div style="font-size:26px;margin-bottom:12px">🎯</div><h3 style="font-size:17px;margin-bottom:8px">Personalized Practice</h3><p class="hint">We detect your slow letters, mistyped keys and weak fingers — then generate drills that target them.</p></div>
+        <div class="card hoverable"><div style="font-size:26px;margin-bottom:12px">📊</div><h3 style="font-size:17px;margin-bottom:8px">Premium Analytics</h3><p class="hint">WPM trends, accuracy curves, consistency, error heatmaps and session comparisons.</p></div>
+        <div class="card hoverable"><div style="font-size:26px;margin-bottom:12px">🤖</div><h3 style="font-size:17px;margin-bottom:8px">AI Typing Coach</h3><p class="hint">After every session the coach explains what improved, what didn't, and what to practise next.</p></div>
+        <div class="card hoverable"><div style="font-size:26px;margin-bottom:12px">🎮</div><h3 style="font-size:17px;margin-bottom:8px">Typing Games</h3><p class="hint">Word Rush and AI races turn practice into something you actually want to do.</p></div>
+        <div class="card hoverable"><div style="font-size:26px;margin-bottom:12px">📚</div><h3 style="font-size:17px;margin-bottom:8px">Structured Courses</h3><p class="hint">From home row basics to professional coding and data-entry typing.</p></div>
+        <div class="card hoverable"><div style="font-size:26px;margin-bottom:12px">🌍</div><h3 style="font-size:17px;margin-bottom:8px">Multi-Language</h3><p class="hint">English, বাংলা, हिन्दी, Español, Français and more — with Unicode support.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Typing modes -->
+  <div class="section" style="padding-top:0">
+    <div class="container">
+      <div class="section-head">
+        <div class="eyebrow">Practice modes</div>
+        <h2>Choose how you want to train</h2>
+      </div>
+      <div class="grid g4" id="modeGrid"></div>
+    </div>
+  </div>
+
+  <!-- Daily challenge + progress + leaderboard preview -->
+  <div class="section" style="padding-top:0">
+    <div class="container grid g3">
+      <div class="card">
+        <div class="eyebrow">Daily Challenge</div>
+        <h3 style="font-size:19px;margin-bottom:10px">5-minute sprint</h3>
+        <p class="hint" style="margin-bottom:18px">Target: <b style="color:var(--text)">60 WPM</b> at <b style="color:var(--text)">95% accuracy</b></p>
+        <div class="progress" style="margin-bottom:16px"><i id="dailyBar" style="width:0%"></i></div>
+        <button class="btn primary" style="width:100%" id="dailyBtn">Start Today's Challenge</button>
+        <p class="hint" style="margin-top:12px" id="dailyStatus">Not completed yet today.</p>
+      </div>
+
+      <div class="card">
+        <div class="eyebrow">Your Progress</div>
+        <h3 style="font-size:19px;margin-bottom:16px">Last 7 sessions</h3>
+        <canvas class="chart" id="landingChart" style="height:150px"></canvas>
+        <p class="hint" style="margin-top:12px">WPM trend across your recent practice sessions.</p>
+      </div>
+
+      <div class="card">
+        <div class="eyebrow">Leaderboard</div>
+        <h3 style="font-size:19px;margin-bottom:16px">Top typists today</h3>
+        <div id="landingLb" style="display:flex;flex-direction:column;gap:9px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Achievements -->
+  <div class="section" style="padding-top:0">
+    <div class="container">
+      <div class="section-head">
+        <div class="eyebrow">Achievements</div>
+        <h2>Earn badges as you grow</h2>
+      </div>
+      <div class="grid g4" id="landingAch"></div>
+    </div>
+  </div>
+
+  <!-- Testimonials -->
+  <div class="section" style="padding-top:0">
+    <div class="container">
+      <div class="section-head">
+        <div class="eyebrow">Testimonials</div>
+        <h2>Loved by students, coders & professionals</h2>
+      </div>
+      <div class="grid g3">
+        <div class="card quote-card"><p>I went from 42 to 78 WPM in six weeks. The weak-key detection is scary accurate — it found my problem with <b>p</b> and <b>q</b> immediately.</p><div class="who"><div class="av" style="background:linear-gradient(135deg,#7c5cff,#22d3ee)">A</div><div><b>Aritra M.</b><small>CS Student, Kolkata</small></div></div></div>
+        <div class="card quote-card"><p>The analytics dashboard is better than anything I've used. I can actually see which sessions moved the needle.</p><div class="who"><div class="av" style="background:linear-gradient(135deg,#ff6b8a,#ffa552)">S</div><div><b>Sneha R.</b><small>Data Entry Lead</small></div></div></div>
+        <div class="card quote-card"><p>Coding mode with real Python and JS snippets made my actual job faster. That's the killer feature for me.</p><div class="who"><div class="av" style="background:linear-gradient(135deg,#5ce1a5,#4aa8ff)">D</div><div><b>Dev P.</b><small>Backend Engineer</small></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="section" style="padding-top:0">
+    <div class="container" style="max-width:820px">
+      <div class="section-head">
+        <div class="eyebrow">FAQ</div>
+        <h2>Questions, answered</h2>
+      </div>
+      <details class="faq" open><summary>Is TypeZen free to use?</summary><p>Yes. Every feature on this site — practice, tests, games, analytics, courses and certificates — runs entirely in your browser and is free. Your data is stored locally on your own device.</p></details>
+      <details class="faq"><summary>How is WPM calculated?</summary><p>TypeZen uses the standard formula: <b>(correct characters ÷ 5) ÷ minutes elapsed</b>. Accuracy is calculated as correct keystrokes divided by total keystrokes, so mistakes are not hidden by speed.</p></details>
+      <details class="faq"><summary>What is Personalized Practice?</summary><p>TypeZen records every keystroke you make. When you finish a session it looks for letters and letter-pairs you mistype most often, then builds a custom drill containing exactly those patterns.</p></details>
+      <details class="faq"><summary>Can I practise with my own text?</summary><p>Absolutely. Open Practice → Custom, paste any text you like, and hit start. You can also save it to your Personal Library for later.</p></details>
+      <details class="faq"><summary>Does it work on mobile?</summary><p>Yes, the interface is fully responsive. That said, TypeZen is designed around a physical keyboard — desktop gives the best experience.</p></details>
+      <details class="faq"><summary>Do I need an account?</summary><p>No. You can start typing instantly. Creating an account (stored locally) lets you keep a named profile, streak, achievements and settings.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ PRACTICE ============================ -->
+<section class="view" id="view-practice">
+  <div class="container practice-shell">
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <span class="toolbar-label">Mode</span>
+        <div class="chips" id="modeChips">
+          <span class="chip active" data-mode="time">⏱ Time</span>
+          <span class="chip" data-mode="words">🔤 Words</span>
+          <span class="chip" data-mode="quote">❝ Quote</span>
+          <span class="chip" data-mode="paragraph">📄 Paragraph</span>
+          <span class="chip" data-mode="code">💻 Code</span>
+          <span class="chip" data-mode="custom">✏️ Custom</span>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div class="toolbar-group" id="amountGroup">
+        <span class="toolbar-label">Amount</span>
+        <div class="chips" id="amountChips"></div>
+      </div>
+      <div class="sep"></div>
+      <div class="toolbar-group">
+        <span class="toolbar-label">Lang</span>
+        <select id="langSelect" style="width:auto;padding:7px 11px;font-size:13px">
+          <option value="english">English</option>
+          <option value="bengali">বাংলা</option>
+          <option value="hindi">हिन्दी</option>
+          <option value="spanish">Español</option>
+          <option value="french">Français</option>
+        </select>
+      </div>
+      <div class="toolbar-group" style="margin-left:auto">
+        <button class="btn sm" id="kbToggle" title="Toggle virtual keyboard">⌨️ Keyboard</button>
+        <button class="btn sm" id="focusToggle" title="Focus mode">🎯 Focus</button>
+        <button class="btn sm primary" id="restartBtn">↻ Restart</button>
+      </div>
+    </div>
+
+    <div class="statbar">
+      <div class="stat"><b id="statWpm">0</b><span>WPM</span></div>
+      <div class="stat"><b id="statAcc">100%</b><span>Accuracy</span></div>
+      <div class="stat"><b id="statTime">1:00</b><span>Time</span></div>
+      <div class="stat"><b id="statProgress">0/25</b><span id="statProgressLabel">Words</span></div>
+    </div>
+
+    <div class="typing-wrap">
+      <div class="typing-area" id="typingArea">
+        <div class="typing-words" id="typingWords"></div>
+      </div>
+      <div class="typing-overlay" id="typingOverlay">
+        <div>
+          <h3 id="overlayTitle">Click here or press any key to start</h3>
+          <p id="overlayText">The timer begins on your first keystroke.</p>
+          <button class="btn primary" id="overlayBtn">Start Now</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Race bar (only in race mode) -->
+    <div class="card" id="racePanel" hidden>
+      <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:8px">
+        <span>🏎️ You</span><span id="raceYouPct">0%</span>
+      </div>
+      <div class="progress" style="margin-bottom:16px"><i id="raceYouBar" style="width:0%"></i></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:8px">
+        <span>🤖 TypeBot</span><span id="raceAiPct">0%</span>
+      </div>
+      <div class="progress"><i id="raceAiBar" style="width:0%;background:linear-gradient(90deg,#ff6b8a,#ffa552)"></i></div>
+    </div>
+
+    <!-- Virtual keyboard -->
+    <div class="kb" id="keyboard"></div>
+
+    <!-- Custom text panel -->
+    <div class="card" id="customPanel" hidden>
+      <h3 style="font-size:16px;margin-bottom:12px">✏️ Custom Practice Text</h3>
+      <textarea id="customText" rows="5" placeholder="Paste your own text here and press Start Custom Practice…"></textarea>
+      <div class="row" style="margin-top:14px">
+        <button class="btn primary" id="customStart">Start Custom Practice</button>
+        <button class="btn" id="customSave">💾 Save to Library</button>
+        <select id="librarySelect" style="width:auto;flex:1;min-width:180px"></select>
+        <button class="btn sm" id="libraryLoad">Load</button>
+        <button class="btn sm danger" id="libraryDelete">Delete</button>
+      </div>
+    </div>
+
+    <!-- Personalized practice -->
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <div class="eyebrow" style="margin-bottom:6px">Personalized Practice</div>
+          <h3 style="font-size:18px">Your weakest keys</h3>
+        </div>
+        <button class="btn primary" id="weakDrillBtn">Generate Drill →</button>
+      </div>
+      <div class="row" id="weakKeys" style="margin-top:18px"></div>
+      <p class="hint" style="margin-top:14px" id="weakHint">Complete a few sessions and TypeZen will detect exactly which keys slow you down.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ TEST ============================ -->
+<section class="view" id="view-test">
+  <div class="container">
+    <div class="section-head" style="margin-bottom:30px">
+      <div class="eyebrow">Typing Test</div>
+      <h2>Take a professional typing test</h2>
+      <p>Choose your settings, then complete the test to receive a full performance report.</p>
+    </div>
+
+    <div class="grid g2" style="max-width:900px;margin:0 auto">
+      <div class="card">
+        <h3 style="font-size:16px;margin-bottom:16px">⏱ Duration</h3>
+        <div class="chips" id="testDuration">
+          <span class="chip" data-v="15">15 sec</span>
+          <span class="chip" data-v="30">30 sec</span>
+          <span class="chip active" data-v="60">1 min</span>
+          <span class="chip" data-v="120">2 min</span>
+          <span class="chip" data-v="300">5 min</span>
+          <span class="chip" data-v="600">10 min</span>
+        </div>
+
+        <h3 style="font-size:16px;margin:26px 0 16px">🎚️ Difficulty</h3>
+        <div class="chips" id="testDifficulty">
+          <span class="chip" data-v="beginner">Beginner</span>
+          <span class="chip" data-v="easy">Easy</span>
+          <span class="chip active" data-v="medium">Medium</span>
+          <span class="chip" data-v="hard">Hard</span>
+          <span class="chip" data-v="expert">Expert</span>
+        </div>
+
+        <h3 style="font-size:16px;margin:26px 0 16px">📚 Content</h3>
+        <div class="chips" id="testContent">
+          <span class="chip active" data-v="words">Common words</span>
+          <span class="chip" data-v="quote">Quotes</span>
+          <span class="chip" data-v="paragraph">Passages</span>
+          <span class="chip" data-v="code">Code</span>
+        </div>
+      </div>
+
+      <div class="card" style="display:flex;flex-direction:column;justify-content:center;text-align:center">
+        <div style="font-size:46px;margin-bottom:12px">🏁</div>
+        <h3 style="font-size:20px;margin-bottom:10px">Ready when you are</h3>
+        <p class="hint" style="margin-bottom:24px" id="testSummary">1 minute · Medium · Common words</p>
+        <button class="btn primary lg" id="startTestBtn">Start Test</button>
+        <div style="margin-top:26px;padding-top:22px;border-top:1px solid var(--border-soft)">
+          <p class="hint">Your personal best</p>
+          <div style="font-family:var(--font-mono);font-size:38px;letter-spacing:-.03em" id="testBest">0 <span style="font-size:14px;color:var(--muted)">WPM</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ GAMES ============================ -->
+<section class="view" id="view-games">
+  <div class="container">
+    <div class="section-head" style="margin-bottom:30px">
+      <div class="eyebrow">Typing Games</div>
+      <h2>Train your reflexes, not just your fingers</h2>
+      <p>Games are the fastest way to build muscle memory. Pick one and go.</p>
+    </div>
+
+    <div class="grid g3" style="margin-bottom:30px">
+      <div class="card hoverable">
+        <div style="font-size:30px;margin-bottom:12px">💥</div>
+        <h3 style="font-size:17px;margin-bottom:8px">Word Rush</h3>
+        <p class="hint" style="margin-bottom:18px">Words fall from the sky. Type them before they hit the ground. 3 lives, 60 seconds.</p>
+        <button class="btn primary" data-game="rush" style="width:100%">Play Word Rush</button>
+      </div>
+      <div class="card hoverable">
+        <div style="font-size:30px;margin-bottom:12px">🏎️</div>
+        <h3 style="font-size:17px;margin-bottom:8px">Type Race</h3>
+        <p class="hint" style="margin-bottom:18px">Race against TypeBot, an AI that types at a steady pace. Beat it to the finish line.</p>
+        <div class="chips" style="margin-bottom:14px">
+          <span class="chip sm" data-ai="40">40 WPM</span>
+          <span class="chip sm active" data-ai="60">60 WPM</span>
+          <span class="chip sm" data-ai="80">80 WPM</span>
+          <span class="chip sm" data-ai="100">100 WPM</span>
+        </div>
+        <button class="btn primary" data-game="race" style="width:100%">Start Race</button>
+      </div>
+      <div class="card hoverable">
+        <div style="font-size:30px;margin-bottom:12px">🛡️</div>
+        <h3 style="font-size:17px;margin-bottom:8px">Key Defender</h3>
+        <p class="hint" style="margin-bottom:18px">Incoming words are asteroids. Type them to shoot them down before impact.</p>
+        <button class="btn primary" data-game="rush" style="width:100%">Play Defender</button>
+      </div>
+    </div>
+
+    <!-- Game stage -->
+    <div class="card" id="gameCard" hidden>
+      <div class="game-hud">
+        <div class="badge purple">Score <b id="gScore" style="margin-left:6px">0</b></div>
+        <div class="badge green">Time <b id="gTime" style="margin-left:6px">60</b></div>
+        <div class="badge amber">Lives <b id="gLives" style="margin-left:6px">❤❤❤</b></div>
+        <div class="badge">Streak <b id="gStreak" style="margin-left:6px">0</b></div>
+        <button class="btn sm" style="margin-left:auto" id="gQuit">Quit</button>
+      </div>
+      <div class="game-stage" id="gameStage">
+        <div class="ground"></div>
+      </div>
+      <div class="row" style="margin-top:16px;justify-content:center">
+        <div class="hint">Type a falling word exactly and it explodes. No need to press space.</div>
+      </div>
+      <div class="row" style="margin-top:10px;justify-content:center">
+        <div class="kbd-cap" id="gBuffer" style="min-width:120px;text-align:center">&nbsp;</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ COURSES ============================ -->
+<section class="view" id="view-courses">
+  <div class="container">
+    <div class="section-head" style="margin-bottom:30px">
+      <div class="eyebrow">Typing Courses</div>
+      <h2>A complete path from beginner to professional</h2>
+      <p>Five structured courses, 24 lessons. Each lesson is a short, focused drill.</p>
+    </div>
+    <div class="grid g2" id="courseGrid"></div>
+  </div>
+</section>
+
+<!-- ============================ ANALYTICS ============================ -->
+<section class="view" id="view-analytics">
+  <div class="container">
+    <div class="row" style="justify-content:space-between;margin-bottom:26px">
+      <div>
+        <div class="eyebrow">Analytics</div>
+        <h2 style="font-size:28px;letter-spacing:-.02em">Performance Dashboard</h2>
+      </div>
+      <button class="btn" id="exportBtn">⬇ Export Data</button>
+    </div>
+
+    <div class="grid g4" style="margin-bottom:22px">
+      <div class="stat"><b id="anCurrent">0</b><span>Current WPM</span></div>
+      <div class="stat"><b id="anBest">0</b><span>Best WPM</span></div>
+      <div class="stat"><b id="anAvg">0</b><span>Average WPM</span></div>
+      <div class="stat"><b id="anAcc">0%</b><span>Avg Accuracy</span></div>
+    </div>
+    <div class="grid g4" style="margin-bottom:26px">
+      <div class="stat"><b id="anTime">0m</b><span>Practice Time</span></div>
+      <div class="stat"><b id="anStreak">0</b><span>Day Streak</span></div>
+      <div class="stat"><b id="anSessions">0</b><span>Sessions</span></div>
+      <div class="stat"><b id="anWords">0</b><span>Words Typed</span></div>
+    </div>
+
+    <div class="grid g2" style="margin-bottom:22px">
+      <div class="card"><h3 style="font-size:15px;margin-bottom:16px">📈 WPM over time</h3><canvas class="chart" id="chartWpm"></canvas></div>
+      <div class="card"><h3 style="font-size:15px;margin-bottom:16px">🎯 Accuracy over time</h3><canvas class="chart" id="chartAcc"></canvas></div>
+    </div>
+    <div class="grid g2" style="margin-bottom:22px">
+      <div class="card"><h3 style="font-size:15px;margin-bottom:16px">📅 Daily activity (minutes)</h3><canvas class="chart" id="chartDaily"></canvas></div>
+      <div class="card"><h3 style="font-size:15px;margin-bottom:16px">⚡ Speed consistency</h3><canvas class="chart" id="chartCons"></canvas></div>
+    </div>
+
+    <div class="grid g3" style="margin-bottom:22px">
+      <div class="card">
+        <h3 style="font-size:15px;margin-bottom:14px">🔥 Most mistyped keys</h3>
+        <div id="mistypedKeys" class="row"></div>
+      </div>
+      <div class="card">
+        <h3 style="font-size:15px;margin-bottom:14px">🐢 Slowest words</h3>
+        <div id="slowWords" class="row"></div>
+      </div>
+      <div class="card">
+        <h3 style="font-size:15px;margin-bottom:14px">🏆 Best / worst session</h3>
+        <div id="bestWorst"></div>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:color-mix(in srgb,var(--accent) 40%,var(--border))">
+      <div class="eyebrow" style="margin-bottom:8px">🤖 AI Typing Coach</div>
+      <h3 style="font-size:19px;margin-bottom:16px">Your personalized coaching report</h3>
+      <div id="coachReport" style="display:flex;flex-direction:column;gap:13px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ LEADERBOARD ============================ -->
+<section class="view" id="view-leaderboard">
+  <div class="container">
+    <div class="section-head" style="margin-bottom:28px">
+      <div class="eyebrow">Leaderboard</div>
+      <h2>Who's fastest?</h2>
+      <p>Global rankings are simulated locally. Your own best score is inserted automatically.</p>
+    </div>
+    <div class="chips" style="justify-content:center;margin-bottom:24px" id="lbFilters">
+      <span class="chip active" data-lb="global">🌍 Global</span>
+      <span class="chip" data-lb="country">🏳️ Country</span>
+      <span class="chip" data-lb="friends">👥 Friends</span>
+      <span class="chip" data-lb="weekly">📅 Weekly</span>
+      <span class="chip" data-lb="alltime">🏆 All-Time</span>
+    </div>
+    <div class="card" style="padding:8px 8px 4px">
+      <table>
+        <thead><tr><th style="width:70px">Rank</th><th>Typist</th><th>Country</th><th style="text-align:right">WPM</th><th style="text-align:right">Accuracy</th><th style="text-align:right">Tests</th></tr></thead>
+        <tbody id="lbBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ DASHBOARD ============================ -->
+<section class="view" id="view-dashboard">
+  <div class="container" id="dashboardRoot"></div>
+</section>
+
+<!-- ============================ PROFILE ============================ -->
+<section class="view" id="view-profile">
+  <div class="container" id="profileRoot"></div>
+</section>
+
+<!-- ============================ SETTINGS ============================ -->
+<section class="view" id="view-settings">
+  <div class="container" style="max-width:880px">
+    <div class="section-head" style="margin-bottom:30px">
+      <div class="eyebrow">Settings</div>
+      <h2>Make TypeZen yours</h2>
+    </div>
+    <div id="settingsRoot" style="display:flex;flex-direction:column;gap:18px"></div>
+  </div>
+</section>
+
+<!-- ============================ FOOTER ============================ -->
+<footer>
+  <div class="container">
+    <div class="foot-grid">
+      <div>
+        <div class="brand" style="margin-bottom:14px"><span class="brand-mark">⌨</span><span class="brand-text">TYPE<em>ZEN</em></span></div>
+        <p class="hint" style="max-width:290px">Practice. Improve. Master. A complete typing platform with personalized training, analytics and games — running entirely in your browser.</p>
+      </div>
+      <div>
+        <h4>Product</h4>
+        <a data-view="practice">Practice</a>
+        <a data-view="test">Typing Tests</a>
+        <a data-view="games">Games</a>
+        <a data-view="courses">Courses</a>
+      </div>
+      <div>
+        <h4>Progress</h4>
+        <a data-view="dashboard">Dashboard</a>
+        <a data-view="analytics">Analytics</a>
+        <a data-view="leaderboard">Leaderboard</a>
+        <a data-view="profile">Profile</a>
+      </div>
+      <div>
+        <h4>Account</h4>
+        <a data-view="settings">Settings</a>
+        <a id="footLogin">Login / Register</a>
+        <a data-view="landing">Home</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© <span id="year"></span> TypeZen — Practice. Improve. Master.</span>
+      <span>Built with vanilla HTML · CSS · JavaScript</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ============================ MODALS ============================ -->
+<div class="modal-backdrop" id="authModal">
+  <div class="modal" style="max-width:430px">
+    <h2 id="authTitle">Welcome back</h2>
+    <p class="sub" id="authSub">Log in to keep your streak and progress.</p>
+    <div id="authFields"></div>
+    <button class="btn primary lg" style="width:100%;margin-top:8px" id="authSubmit">Log in</button>
+    <p class="hint" style="text-align:center;margin-top:16px">
+      <span id="authSwitchText">Don't have an account?</span>
+      <a id="authSwitch" style="color:var(--accent);cursor:pointer;font-weight:700">Register</a>
+    </p>
+    <p class="hint" style="text-align:center;margin-top:14px;opacity:.7">Demo only — accounts are stored locally in your browser.</p>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="reportModal">
+  <div class="modal wide" id="reportBody"></div>
+</div>
+
+<div class="modal-backdrop" id="certModal">
+  <div class="modal wide">
+    <div id="certBody"></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<input class="sr-only" id="hiddenInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+
+<script>
+/* ================================================================
+   TYPEZEN — APPLICATION SCRIPT
+   ================================================================ */
+(function () {
+'use strict';
+
+/* ---------------------------------------------------------------
+   1. UTILITIES
+   --------------------------------------------------------------- */
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rand  = n => Math.floor(Math.random() * n);
+const pick  = arr => arr[rand(arr.length)];
+const todayKey = () => new Date().toISOString().slice(0, 10);
+const fmtClock = s => {
+  s = Math.max(0, Math.round(s));
+  const m = Math.floor(s / 60);
+  return m + ':' + String(s % 60).padStart(2, '0');
+};
+const fmtMinutes = m => (m >= 60 ? Math.floor(m / 60) + 'h ' + Math.round(m % 60) + 'm' : Math.round(m) + 'm');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const avg = a => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
+const std = a => {
+  if (a.length < 2) return 0;
+  const m = avg(a);
+  return Math.sqrt(avg(a.map(v => (v - m) ** 2)));
+};
+function shuffle(a) {
+  const b = a.slice();
+  for (let i = b.length - 1; i > 0; i--) { const j = rand(i + 1); [b[i], b[j]] = [b[j], b[i]]; }
+  return b;
+}
+
+/* ---------------------------------------------------------------
+   2. STORAGE
+   --------------------------------------------------------------- */
+const DB = {
+  get(k, d) {
+    try { const v = localStorage.getItem('tz:' + k); return v === null ? d : JSON.parse(v); }
+    catch (e) { return d; }
+  },
+  set(k, v) { try { localStorage.setItem('tz:' + k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { localStorage.removeItem('tz:' + k); } catch (e) {} }
+};
+
+/* ---------------------------------------------------------------
+   3. CONTENT DATA
+   --------------------------------------------------------------- */
+const WORDS = {
+  english: ('the be to of and a in that have it for not on with he as you do at this but his by from they we say her she or an will my one all would there their what so up out if about who get which go me when make can like time no just him know take people into year your good some could them see other than then now look only come its over think also back after use two how our work first well way even new want because any these give day most us water been call find long down did made may part place great little world own under last never start city earth eye light thought head story left few while along might close something seem next hard open example begin life always those both paper together got group often run important until children side feel night second book carry took science eat room friend began idea fish mountain stop once base hear horse cut sure watch color face wood main enough plain girl usual young ready above ever red list though feet care simple within love person money serve appear road map rain rule govern pull cool notice voice fall power town fine certain fly unit lead cry dark machine note wait plan figure star box noun field rest correct able pound done beauty drive stood contain front teach week final gave green oh quick develop sleep warm free minute strong special mind behind clear tail produce fact street inch lot nothing course stay wheel full force blue object decide surface deep moon island foot yet busy test record boat common gold possible plane age dry wonder laugh thousand ago ran check game shape yes hot miss brought heat snow bed bring sit perhaps fill east weight language among')
+    .split(' '),
+  bengali: 'আমি তুমি সে আমরা তোমরা তারা ভালো খারাপ বই কলম ঘর পানি মানুষ সময় দেশ মন আলো রাত দিন হাত পা মুখ চোখ কান মাথা ফল ফুল গাছ নদী পাখি মেঘ বৃষ্টি রোদ আকাশ মাটি পথ শহর গ্রাম শিক্ষা বিদ্যালয় ছাত্র শিক্ষক লেখা পড়া কাজ খেলা গান স্বপ্ন ভালোবাসা আশা'.split(' '),
+  hindi: 'मैं तुम वह हम आप वे अच्छा बुरा किताब कलम घर पानी इंसान समय देश मन रोशनी रात दिन हाथ पैर मुँह आँख कान सिर फल फूल पेड़ नदी पक्षी बादल बारिश धूप आकाश ज़मीन रास्ता शहर गाँव शिक्षा विद्यालय छात्र शिक्षक लिखना पढ़ना काम खेल गाना सपना प्यार उम्मीद'.split(' '),
+  spanish: 'el la de que y a en un ser se no haber por con su para como estar tener le lo todo pero mas hacer o poder decir este ir otro ese si me ya ver porque dar cuando muy sin vez mucho saber que sobre mi alguno mismo yo tambien hasta ano dos querer entre asi primero desde grande eso ni nos llegar pasar tiempo ella si dia uno bien poco deber entonces poner cosa tanto hombre parecer nuestro tan donde ahora parte despues vida quedar siempre creer hablar llevar dejar nada cada seguir menos nuevo encontrar'.split(' '),
+  french: 'le de un etre et a en avoir que pour dans ce il qui ne sur se pas plus pouvoir par je avec tout faire son mettre autre on mais nous comme ou si leur y dire elle devoir avant deux meme prendre aussi celui donner bien ou fois vous encore nouveau aller cela entre premier vouloir deja grand mon me moins aucun lui temps tres savoir falloir voir quelque sans raison notre dont non an monde jour monsieur demander alors apres trouver personne rendre part dernier venir pendant passer peu lequel suite bon comprendre depuis point ainsi heure'.split(' ')
+};
+
+const QUOTES = [
+  'The only way to do great work is to love what you do. If you have not found it yet keep looking and do not settle.',
+  'Success is not final, failure is not fatal: it is the courage to continue that counts the most in the end.',
+  'Simplicity is the ultimate sophistication, and the art of removing what is unnecessary is the hardest craft.',
+  'The best time to plant a tree was twenty years ago. The second best time is right now, so begin today.',
+  'Programs must be written for people to read, and only incidentally for machines to execute them correctly.',
+  'Discipline is choosing between what you want now and what you want most, and it is learned through repetition.',
+  'Every expert was once a beginner who refused to give up when the practice felt slow and pointless.',
+  'Talk is cheap. Show me the code, because working software is the only honest measure of progress.',
+  'You do not rise to the level of your goals. You fall to the level of your systems, so build good systems.',
+  'It does not matter how slowly you go as long as you do not stop moving forward with steady purpose.',
+  'The curious paradox is that when I accept myself just as I am, then I can change and grow beyond it.',
+  'Focus is not saying yes to the right thing. Focus is saying no to the other hundred good ideas.'
+];
+
+const PASSAGES = {
+  easy: [
+    'The sun rose over the quiet town and the streets began to fill with people going about their day. A small bakery on the corner opened its doors and the smell of fresh bread drifted down the road. Children walked to school with bags on their backs, laughing at jokes only they understood.',
+    'A gentle rain fell through the night and by morning the garden was full of small shining drops. The leaves looked greener than they had in weeks. Birds returned to the feeders and the whole yard felt awake again after a long and quiet season of rest.'
+  ],
+  medium: [
+    'Learning to type well is less about speed and more about rhythm. When your fingers move in a steady, predictable pattern, your brain stops spending energy on finding keys and starts spending it on the words themselves. Speed is simply a side effect of that fluency, and it arrives quietly, almost without notice.',
+    'Good software is built the same way good habits are formed: in small, deliberate steps that compound over time. You write a test, fix a bug, rename a variable, and slowly the whole system becomes something you can reason about. There is no single moment of mastery, only a long series of ordinary improvements.'
+  ],
+  hard: [
+    'The relationship between accuracy and velocity in skilled motor performance is well documented across domains. Novice performers typically prioritize speed, which produces erratic error rates and inconsistent timing. Expert performers, by contrast, demonstrate a characteristic economy of motion: unnecessary movements are eliminated, and each keystroke is executed with minimal variance in inter-key interval.',
+    'Distributed systems introduce a class of failure that is qualitatively different from single-machine failure. Partial failures, clock skew, message reordering, and network partitions mean that a node cannot reliably distinguish between a slow peer and a dead one. Consequently, consensus protocols must be designed to tolerate ambiguity rather than resolve it.'
+  ],
+  expert: [
+    'Notwithstanding the considerable ambiguity inherent in the empirical literature, the preponderance of evidence suggests that deliberate practice — characterized by focused attention, immediate feedback, and repetition at the edge of current ability — accounts for a substantial proportion of the variance in expert performance. Superficial repetition, by contrast, yields diminishing returns asymptotically.',
+    'The epistemological foundations of the scientific method rest upon falsifiability: a proposition is meaningful only insofar as it excludes some conceivable state of affairs. Consequently, hypotheses that cannot in principle be contradicted by observation are not merely unproven but fundamentally unscientific, a criterion whose implications remain contentious across disciplines.'
+  ]
+};
+
+const CODE = [
+  'def fibonacci(n):\n    if n < 2:\n        return n\n    return fibonacci(n - 1) + fibonacci(n - 2)',
+  'const users = await fetch("/api/users")\n  .then(res => res.json())\n  .filter(u => u.active);',
+  'SELECT name, email FROM users\nWHERE created_at > "2024-01-01"\nORDER BY name ASC\nLIMIT 50;',
+  'function debounce(fn, delay) {\n  let timer;\n  return (...args) => {\n    clearTimeout(timer);\n    timer = setTimeout(() => fn(...args), delay);\n  };\n}',
+  'class Stack {\n  constructor() { this.items = []; }\n  push(x) { this.items.push(x); }\n  pop() { return this.items.pop(); }\n}',
+  'for (int i = 0; i < n; i++) {\n    sum += arr[i] * weight[i];\n    printf("%d\\n", sum);\n}',
+  '.card {\n  display: flex;\n  gap: 1rem;\n  border-radius: 12px;\n  background: var(--surface);\n}',
+  'import React, { useState } from "react";\n\nexport default function Counter() {\n  const [n, setN] = useState(0);\n  return <button onClick={() => setN(n + 1)}>{n}</button>;\n}'
+];
+
+const COURSES = [
+  {
+    id: 'c1', title: 'Course 1 — Absolute Beginner', icon: '🌱', level: 'Beginner',
+    desc: 'Home row, finger positioning and your very first keys.',
+    lessons: [
+      { id: 'c1l1', name: 'Home row: ASDF JKL;', text: 'asdf jkl; asdf jkl; fjfj dkdk slsl a;a; asdf jkl; fjdk slaa ;lkj fdsa jkl; asdf' },
+      { id: 'c1l2', name: 'Finger positioning', text: 'aa ss dd ff jj kk ll ;; as df jk l; fa fs fd fj ka ks kd kl la ls ld l;' },
+      { id: 'c1l3', name: 'Spacebar & Enter', text: 'a sad lad ask fall all jak sad lad fall ask all sad jak lad fall ask' },
+      { id: 'c1l4', name: 'Backspace control', text: 'the and you that was for are with his they this have from one had word but not what all' },
+      { id: 'c1l5', name: 'First real words', text: 'a sad lad asks all fall jak dad had gas fad lad ash dash flask salad' }
+    ]
+  },
+  {
+    id: 'c2', title: 'Course 2 — Beginner', icon: '🔤', level: 'Beginner',
+    desc: 'Common words, simple sentences and capital letters.',
+    lessons: [
+      { id: 'c2l1', name: 'Top row reach', text: 'we you type quiet power tower write pretty quote route our output tour' },
+      { id: 'c2l2', name: 'Bottom row reach', text: 'zebra buzz vex mix cave numb bank jump value bronze amazing voxel' },
+      { id: 'c2l3', name: 'Capital letters', text: 'Anna lives in Boston. Mark and Sara went to Paris. The Nile is long. Delhi is busy.' },
+      { id: 'c2l4', name: 'Simple sentences', text: 'The cat sat on the warm mat. She reads a book every night. We walk to the park at noon.' },
+      { id: 'c2l5', name: 'Punctuation basics', text: 'Hello, world! How are you? I am fine, thanks. Let us begin; it is time to go.' }
+    ]
+  },
+  {
+    id: 'c3', title: 'Course 3 — Intermediate', icon: '⚙️', level: 'Intermediate',
+    desc: 'Numbers, symbols, punctuation and speed development.',
+    lessons: [
+      { id: 'c3l1', name: 'Number row', text: '12 34 56 78 90 11 22 33 44 55 66 77 88 99 10 20 30 40 50 60 70 80 90 100' },
+      { id: 'c3l2', name: 'Symbols', text: '! @ # $ % ^ & * ( ) _ + { } [ ] | \\ : " < > ? / ~ `' },
+      { id: 'c3l3', name: 'Mixed punctuation', text: 'Wait — really? Yes; absolutely! (That cost $42.50, or about 12% more.) "Fine," she said.' },
+      { id: 'c3l4', name: 'Speed drills', text: 'the and for you that with this have from they will one all would there their what about which when make like time just know take people into year your good some could them see other than then now look only come its over think also back after use two how our work first well way even new want' },
+      { id: 'c3l5', name: 'Longer sentences', text: 'Typing well requires patience, steady breathing and a willingness to slow down whenever accuracy begins to slip away from you.' }
+    ]
+  },
+  {
+    id: 'c4', title: 'Course 4 — Advanced', icon: '🚀', level: 'Advanced',
+    desc: 'Difficult words, programming text, long paragraphs and accuracy training.',
+    lessons: [
+      { id: 'c4l1', name: 'Difficult words', text: 'rhythm synchronize extraordinary conscientious bureaucracy mischievous juxtaposition quintessential ubiquitous' },
+      { id: 'c4l2', name: 'Programming text', text: 'const result = items.filter(i => i.active).map(i => i.name).join(", ");' },
+      { id: 'c4l3', name: 'Long paragraphs', text: PASSAGES.hard[0] },
+      { id: 'c4l4', name: 'Accuracy training', text: 'accuracy accuracy accuracy precise precise precise steady steady steady control control control rhythm rhythm rhythm focus focus focus' }
+    ]
+  },
+  {
+    id: 'c5', title: 'Course 5 — Professional', icon: '💼', level: 'Professional',
+    desc: 'Business typing, coding, data entry and competitive typing.',
+    lessons: [
+      { id: 'c5l1', name: 'Business emails', text: 'Dear Ms. Sharma, Thank you for your prompt response regarding the quarterly report. I have attached the revised figures for your review.' },
+      { id: 'c5l2', name: 'Data entry', text: 'INV-2041 | 2024-03-11 | 1450.00 | PAID\nINV-2042 | 2024-03-12 | 890.50 | PENDING' },
+      { id: 'c5l3', name: 'Coding speed', text: CODE[0] },
+      { id: 'c5l4', name: 'Competitive typing', text: PASSAGES.expert[0] }
+    ]
+  }
+];
+
+const ACHIEVEMENTS = [
+  { id: 'first',  icon: '🏅', name: 'First Test',       desc: 'Complete your first typing session',        check: (s, u) => u.sessions >= 1 },
+  { id: 'wpm40',  icon: '🌱', name: 'Getting Started',  desc: 'Reach 40 WPM in a session',                 check: s => s && s.wpm >= 40 },
+  { id: 'wpm50',  icon: '⚡', name: '50 WPM',           desc: 'Reach 50 WPM in a session',                 check: s => s && s.wpm >= 50 },
+  { id: 'wpm75',  icon: '🚀', name: '75 WPM',           desc: 'Reach 75 WPM in a session',                 check: s => s && s.wpm >= 75 },
+  { id: 'wpm100', icon: '🔥', name: '100 WPM Club',     desc: 'Reach 100 WPM in a session',                check: s => s && s.wpm >= 100 },
+  { id: 'acc99',  icon: '💯', name: 'Precision',        desc: 'Finish a session with 99% accuracy',        check: s => s && s.acc >= 99 && s.correct > 100 },
+  { id: 'acc100', icon: '🎯', name: 'Flawless',         desc: 'Finish a session with 100% accuracy',       check: s => s && s.acc >= 100 && s.correct > 80 },
+  { id: 'streak7',icon: '📅', name: '7-Day Streak',     desc: 'Practise 7 days in a row',                  check: (s, u) => u.streak >= 7 },
+  { id: 'streak30',icon:'🏆', name: '30-Day Streak',    desc: 'Practise 30 days in a row',                 check: (s, u) => u.streak >= 30 },
+  { id: 'words10k',icon:'📚', name: '10,000 Words',     desc: 'Type a total of 10,000 words',              check: (s, u) => u.totalWords >= 10000 },
+  { id: 'words100k',icon:'💎',name: '100,000 Words',    desc: 'Type a total of 100,000 words',             check: (s, u) => u.totalWords >= 100000 },
+  { id: 'sess25', icon: '🧠', name: 'Dedicated',        desc: 'Complete 25 practice sessions',             check: (s, u) => u.sessions >= 25 },
+  { id: 'time1h', icon: '⏱️', name: 'One Hour In',      desc: 'Practise for a total of 1 hour',            check: (s, u) => u.totalSeconds >= 3600 },
+  { id: 'time10h',icon: '🕰️', name: 'Ten Hour Club',    desc: 'Practise for a total of 10 hours',          check: (s, u) => u.totalSeconds >= 36000 },
+  { id: 'game1',  icon: '🎮', name: 'Gamer',            desc: 'Score 500 points in Word Rush',             check: (s, u) => (u.bestGameScore || 0) >= 500 },
+  { id: 'race1',  icon: '🏎️', name: 'Race Winner',      desc: 'Win a race against TypeBot',                check: (s, u) => (u.racesWon || 0) >= 1 }
+];
+
+const FAKE_LB = [
+  { name: 'Nova',        country: '🇺🇸', wpm: 148, acc: 98.6, tests: 412 },
+  { name: 'Kai_88',      country: '🇯🇵', wpm: 141, acc: 97.9, tests: 388 },
+  { name: 'Velocity',    country: '🇩🇪', wpm: 136, acc: 99.1, tests: 501 },
+  { name: 'ShadowType',  country: '🇰🇷', wpm: 132, acc: 96.8, tests: 274 },
+  { name: 'Priya_R',     country: '🇮🇳', wpm: 128, acc: 98.2, tests: 356 },
+  { name: 'Quantum',     country: '🇬🇧', wpm: 124, acc: 97.4, tests: 289 },
+  { name: 'AritraX',     country: '🇮🇳', wpm: 119, acc: 99.0, tests: 233 },
+  { name: 'Blaze',       country: '🇧🇷', wpm: 115, acc: 95.6, tests: 198 },
+  { name: 'Nimbus',      country: '🇨🇦', wpm: 111, acc: 98.8, tests: 342 },
+  { name: 'Zephyr',      country: '🇫🇷', wpm: 108, acc: 96.1, tests: 176 },
+  { name: 'Quill',       country: '🇦🇺', wpm: 104, acc: 97.7, tests: 210 },
+  { name: 'Ember',       country: '🇪🇸', wpm: 99,  acc: 95.2, tests: 154 },
+  { name: 'Vortex',      country: '🇳🇱', wpm: 95,  acc: 96.9, tests: 188 },
+  { name: 'Lyric',       country: '🇸🇪', wpm: 91,  acc: 98.0, tests: 142 },
+  { name: 'Pixel',       country: '🇵🇱', wpm: 87,  acc: 94.8, tests: 121 },
+  { name: 'Rune',        country: '🇳🇴', wpm: 83,  acc: 97.1, tests: 109 },
+  { name: 'Mirage',      country: '🇲🇽', wpm: 79,  acc: 93.9, tests: 96 },
+  { name: 'Echo',        country: '🇮🇹', wpm: 74,  acc: 96.4, tests: 88 },
+  { name: 'Fable',       country: '🇵🇹', wpm: 69,  acc: 95.0, tests: 73 },
+  { name: 'Drift',       country: '🇹🇷', wpm: 63,  acc: 93.2, tests: 61 }
+];
+
+/* ---------------------------------------------------------------
+   4. APP STATE
+   --------------------------------------------------------------- */
+const App = {
+  user: DB.get('user', null),
+  settings: Object.assign({
+    theme: 'dark',
+    accent: '#7c5cff',
+    fontSize: 30,
+    sound: true,
+    showKeyboard: true,
+    cursorStyle: 'block',
+    errorBehavior: 'letter',
+    defaultDuration: 60,
+    defaultMode: 'time',
+    language: 'english',
+    animations: true,
+    publicProfile: true,
+    leaderboardVisible: true,
+    dailyReminder: true,
+    notifSound: true,
+    goalWpm: 80
+  }, DB.get('settings', {})),
+  sessions: DB.get('sessions', []),
+  keyStats: DB.get('keyStats', {}),
+  unlocked: DB.get('unlocked', {}),
+  streak: DB.get('streak', { count: 0, last: null }),
+  library: DB.get('library', []),
+  lessonProgress: DB.get('lessonProgress', {}),
+  bestGameScore: DB.get('bestGameScore', 0),
+  racesWon: DB.get('racesWon', 0)
+};
+
+/* totals */
+function userTotals() {
+  const s = App.sessions;
+  const totalWords = s.reduce((a, x) => a + (x.words || 0), 0);
+  const totalSeconds = s.reduce((a, x) => a + (x.duration || 0), 0);
+  return { sessions: s.length, totalWords, totalSeconds };
+}
+function saveAll() {
+  DB.set('settings', App.settings);
+  DB.set('sessions', App.sessions);
+  DB.set('keyStats', App.keyStats);
+  DB.set('unlocked', App.unlocked);
+  DB.set('streak', App.streak);
+  DB.set('library', App.library);
+  DB.set('lessonProgress', App.lessonProgress);
+  DB.set('bestGameScore', App.bestGameScore);
+  DB.set('racesWon', App.racesWon);
+  if (App.user) DB.set('user', App.user);
+}
+
+/* ---------------------------------------------------------------
+   5. TOASTS
+   --------------------------------------------------------------- */
+function toast(title, msg, icon) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = `<b>${icon ? icon + ' ' : ''}${esc(title)}</b><small>${esc(msg || '')}</small>`;
+  $('#toasts').appendChild(t);
+  setTimeout(() => {
+    t.style.transition = 'opacity .3s, transform .3s';
+    t.style.opacity = '0';
+    t.style.transform = 'translateX(40px)';
+    setTimeout(() => t.remove(), 320);
+  }, 4200);
+}
+
+/* ---------------------------------------------------------------
+   6. THEME & SETTINGS APPLICATION
+   --------------------------------------------------------------- */
+function applySettings() {
+  const s = App.settings;
+  document.documentElement.setAttribute('data-theme', s.theme);
+  document.documentElement.style.setProperty('--accent', s.accent);
+  document.documentElement.style.setProperty('--type-size', s.fontSize + 'px');
+  $('#themeBtn').textContent = s.theme === 'light' ? '☀️' : (s.theme === 'oled' ? '⚫' : (s.theme === 'nord' ? '🧊' : '🌙'));
+  $('#soundBtn').textContent = s.sound ? '🔊' : '🔇';
+  $('#keyboard').classList.toggle('kb-hidden', !s.showKeyboard);
+  document.body.classList.toggle('focus-mode', !!s.focusMode);
+}
+
+/* sound */
+let audioCtx = null;
+function click(freq) {
+  if (!App.settings.sound) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'sine';
+    o.frequency.value = freq || 620;
+    g.gain.setValueAtTime(0.035, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.06);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + 0.06);
+  } catch (e) {}
+}
+
+/* ---------------------------------------------------------------
+   7. ROUTER
+   --------------------------------------------------------------- */
+const VIEWS = ['landing','practice','test','games','courses','analytics','leaderboard','dashboard','profile','settings'];
+function go(view) {
+  if (!VIEWS.includes(view)) view = 'landing';
+  if (Typing.active && view !== 'practice') Typing.stop();
+  if (view !== 'games' && Game.running) Game.quit();
+
+  $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
+  $$('.nav-link').forEach(a => a.classList.toggle('active', a.dataset.view === view));
+  $('#navLinks').classList.remove('open');
+  window.scrollTo({ top: 0, behavior: 'auto' });
+
+  if (view === 'dashboard') renderDashboard();
+  if (view === 'analytics') renderAnalytics();
+  if (view === 'leaderboard') renderLeaderboard();
+  if (view === 'profile') renderProfile();
+  if (view === 'settings') renderSettings();
+  if (view === 'courses') renderCourses();
+  if (view === 'landing') renderLanding();
+  if (view === 'practice') { buildKeyboard(); updateWeakKeys(); }
+  try { history.replaceState(null, '', '#' + view); } catch (e) {}
+}
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-view]');
+  if (t) { e.preventDefault(); go(t.dataset.view); }
+});
+
+/* ---------------------------------------------------------------
+   8. AUTH
+   --------------------------------------------------------------- */
+let authMode = 'login';
+function openAuth(mode) {
+  authMode = mode || 'login';
+  renderAuthModal();
+  $('#authModal').classList.add('open');
+}
+function renderAuthModal() {
+  const isLogin = authMode === 'login';
+  $('#authTitle').textContent = isLogin ? 'Welcome back' : 'Create your account';
+  $('#authSub').textContent = isLogin ? 'Log in to keep your streak and progress.' : 'Track your progress, streak and achievements.';
+  $('#authSubmit').textContent = isLogin ? 'Log in' : 'Create account';
+  $('#authSwitchText').textContent = isLogin ? "Don't have an account?" : 'Already have an account?';
+  $('#authSwitch').textContent = isLogin ? 'Register' : 'Log in';
+
+  $('#authFields').innerHTML = isLogin
+    ? `<div class="field"><label>Email or Username</label><input id="afId" placeholder="you@example.com" /></div>
+       <div class="field"><label>Password</label><input id="afPw" type="password" placeholder="••••••••" /></div>
+       <label style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px"><input type="checkbox" id="afRemember" style="width:auto" checked /> Remember me</label>`
+    : `<div class="field"><label>Full name</label><input id="afName" placeholder="Aritra Mondal" /></div>
+       <div class="field"><label>Username</label><input id="afUser" placeholder="aritra" /></div>
+       <div class="field"><label>Email</label><input id="afEmail" type="email" placeholder="you@example.com" /></div>
+       <div class="field"><label>Password</label><input id="afPw" type="password" placeholder="Min 6 characters" /></div>
+       <div class="field"><label>Country</label><input id="afCountry" placeholder="India" /></div>
+       <div class="field"><label>Typing goal (WPM)</label><input id="afGoal" type="number" value="80" /></div>`;
+}
+function simpleHash(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+  return 'h' + Math.abs(h).toString(36);
+}
+$('#authSwitch').addEventListener('click', () => { authMode = authMode === 'login' ? 'register' : 'login'; renderAuthModal(); });
+$('#authSubmit').addEventListener('click', () => {
+  if (authMode === 'register') {
+    const name = $('#afName').value.trim();
+    const username = $('#afUser').value.trim();
+    const email = $('#afEmail').value.trim();
+    const pw = $('#afPw').value;
+    const country = $('#afCountry').value.trim();
+    const goal = parseInt($('#afGoal').value, 10) || 80;
+    if (!name || !username || !email || pw.length < 6) { toast('Check your details', 'Fill every field (password ≥ 6 chars).', '⚠️'); return; }
+    App.user = {
+      name, username, email, country: country || '—',
+      pw: simpleHash(pw), joined: new Date().toISOString(), goal, avatar: null
+    };
+    App.settings.goalWpm = goal;
+    saveAll(); applySettings(); refreshAuthUI(); closeModals();
+    toast('Welcome to TypeZen, ' + name.split(' ')[0] + '!', 'Your account is ready.', '🎉');
+  } else {
+    const id = $('#afId').value.trim();
+    const pw = $('#afPw').value;
+    if (!App.user) { toast('No account found', 'Register first — accounts are stored locally.', '⚠️'); return; }
+    if ((id === App.user.email || id === App.user.username) && simpleHash(pw) === App.user.pw) {
+      closeModals(); refreshAuthUI();
+      toast('Welcome back, ' + App.user.name.split(' ')[0] + '!', 'Good to see you again.', '👋');
+    } else {
+      toast('Login failed', 'Email/username or password is incorrect.', '🚫');
+    }
+  }
+});
+function refreshAuthUI() {
+  const logged = !!App.user;
+  $('#authBtn').hidden = logged;
+  $('#avatarMenu').hidden = !logged;
+  if (logged) {
+    const initial = (App.user.name || App.user.username || 'U').charAt(0).toUpperCase();
+    $('#avatarBtn').textContent = initial;
+    if (App.user.avatar) {
+      $('#avatarBtn').style.backgroundImage = 'url(' + App.user.avatar + ')';
+      $('#avatarBtn').textContent = '';
+    }
+  }
+  $('#streakNum').textContent = App.streak.count || 0;
+}
+$('#authBtn').addEventListener('click', () => openAuth('login'));
+$('#footLogin').addEventListener('click', () => openAuth('login'));
+$('#avatarBtn').addEventListener('click', e => { e.stopPropagation(); $('#avatarDrop').classList.toggle('open'); });
+document.addEventListener('click', () => $('#avatarDrop').classList.remove('open'));
+$('#logoutBtn').addEventListener('click', () => {
+  App.user = null; DB.del('user'); refreshAuthUI();
+  toast('Logged out', 'Your progress is still saved locally.', '👋');
+  go('landing');
+});
+function closeModals() { $$('.modal-backdrop').forEach(m => m.classList.remove('open')); }
+$$('.modal-backdrop').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModals(); });
+
+/* ---------------------------------------------------------------
+   9. NAV TOGGLES
+   --------------------------------------------------------------- */
+$('#hamburger').addEventListener('click', () => $('#navLinks').classList.toggle('open'));
+$('#themeBtn').addEventListener('click', () => {
+  const order = ['dark', 'light', 'oled', 'nord'];
+  const i = order.indexOf(App.settings.theme);
+  App.settings.theme = order[(i + 1) % order.length];
+  saveAll(); applySettings();
+});
+$('#soundBtn').addEventListener('click', () => {
+  App.settings.sound = !App.settings.sound;
+  saveAll(); applySettings();
+  toast('Key sounds ' + (App.settings.sound ? 'on' : 'off'), '', App.settings.sound ? '🔊' : '🔇');
+});
+$('#streakChip').addEventListener('click', () => go('dashboard'));
+
+/* ---------------------------------------------------------------
+   10. VIRTUAL KEYBOARD
+   --------------------------------------------------------------- */
+const KB_ROWS = [
+  [['`','`','f-lp'],['1','1','f-lp'],['2','2','f-lr'],['3','3','f-lm'],['4','4','f-li'],['5','5','f-li'],['6','6','f-ri'],['7','7','f-ri'],['8','8','f-rm'],['9','9','f-rr'],['0','0','f-rp'],['-','-','f-rp'],['=','=','f-rp'],['Backspace','⌫','f-rp wide']],
+  [['Tab','⇥','f-lp wide'],['q','q','f-lp'],['w','w','f-lr'],['e','e','f-lm'],['r','r','f-li'],['t','t','f-li'],['y','y','f-ri'],['u','u','f-ri'],['i','i','f-rm'],['o','o','f-rr'],['p','p','f-rp'],['[','[','f-rp'],[']',']','f-rp'],['\\','\\','f-rp']],
+  [['CapsLock','⇪','f-lp wide'],['a','a','f-lp'],['s','s','f-lr'],['d','d','f-lm'],['f','f','f-li'],['g','g','f-li'],['h','h','f-ri'],['j','j','f-ri'],['k','k','f-rm'],['l','l','f-rr'],[';',';','f-rp'],["'","'",'f-rp'],['Enter','↵','f-rp wide']],
+  [['Shift','⇧','f-lp wide'],['z','z','f-lp'],['x','x','f-lr'],['c','c','f-lm'],['v','v','f-li'],['b','b','f-li'],['n','n','f-ri'],['m','m','f-ri'],[',',',','f-rm'],['.','.','f-rr'],['/','/','f-rp'],['Shift2','⇧','f-rp wide']],
+  [[' ',' ','space']]
+];
+function buildKeyboard() {
+  const kb = $('#keyboard');
+  if (kb.dataset.built === '1') return;
+  kb.innerHTML = KB_ROWS.map(row =>
+    `<div class="kb-row">${row.map(([key, label, cls]) =>
+      `<div class="key ${cls}" data-key="${esc(key)}">${esc(label)}</div>`).join('')}</div>`
+  ).join('');
+  kb.dataset.built = '1';
+}
+function kbPress(key, down) {
+  const el = $(`.key[data-key="${CSS.escape(key)}"]`);
+  if (!el) return;
+  if (down) { el.classList.add('active'); setTimeout(() => el.classList.remove('active'), 110); }
+}
+function kbHighlightNext(ch) {
+  $$('.key.next').forEach(k => k.classList.remove('next'));
+  if (!ch) return;
+  const el = $(`.key[data-key="${CSS.escape(ch.toLowerCase())}"]`);
+  if (el) el.classList.add('next');
+}
+
+/* ---------------------------------------------------------------
+   11. TYPING ENGINE
+   --------------------------------------------------------------- */
+const Typing = {
+  active: false,
+  finished: false,
+  mode: 'time',
+  duration: 60,
+  wordTarget: 25,
+  language: 'english',
+  difficulty: 'medium',
+  words: [],
+  wordEls: [],
+  wi: 0,
+  li: 0,
+  startTs: 0,
+  timeLeft: 60,
+  tickId: null,
+  rafId: null,
+  samples: [],
+  stats: null,
+  race: null,
+  isTest: false,
+
+  resetStats() {
+    this.stats = {
+      correct: 0, incorrect: 0, backspaces: 0, keystrokes: 0,
+      wordsCorrect: 0, wordsIncorrect: 0, charsTyped: 0,
+      keyErrors: {}, wordTimes: [], extraChars: 0
+    };
+    this.samples = [];
+    this.wordStart = 0;
+  },
+
+  /* Build word array from config */
+  buildWords(cfg) {
+    const lang = cfg.language || 'english';
+    let pool = WORDS[lang] || WORDS.english;
+
+    if (cfg.mode === 'quote') {
+      return pick(QUOTES).split(/\s+/);
+    }
+    if (cfg.mode === 'paragraph') {
+      const d = cfg.difficulty === 'expert' ? 'expert' : cfg.difficulty === 'hard' ? 'hard' : cfg.difficulty === 'medium' ? 'medium' : 'easy';
+      return pick(PASSAGES[d]).split(/\s+/);
+    }
+    if (cfg.mode === 'code') {
+      return pick(CODE).replace(/\n/g, ' ').replace(/\s+/g, ' ').trim().split(/\s+/);
+    }
+    if (cfg.mode === 'custom') {
+      return (cfg.text || '').trim().split(/\s+/).filter(Boolean);
+    }
+    if (cfg.mode === 'words') {
+      const out = [];
+      while (out.length < cfg.wordTarget) out.push(pick(pool));
+      return out;
+    }
+    // time mode — a generous buffer
+    const n = Math.max(80, Math.ceil((cfg.duration / 60) * 160));
+    const out = [];
+    for (let i = 0; i < n; i++) out.push(pick(pool));
+    return out;
+  },
+
+  load(cfg) {
+    cfg = cfg || {};
+    this.mode = cfg.mode || 'time';
+    this.duration = cfg.duration || 60;
+    this.wordTarget = cfg.wordTarget || 25;
+    this.language = cfg.language || App.settings.language;
+    this.difficulty = cfg.difficulty || 'medium';
+    this.isTest = !!cfg.isTest;
+    this.race = cfg.race || null;
+
+    this.words = this.buildWords({
+      mode: this.mode,
+      duration: this.duration,
+      wordTarget: this.wordTarget,
+      language: this.language,
+      difficulty: this.difficulty,
+      text: cfg.text
+    });
+    if (!this.words.length) this.words = ['type', 'zen', 'practice'];
+
+    this.wi = 0; this.li = 0;
+    this.finished = false;
+    this.active = false;
+    this.startTs = 0;
+    this.timeLeft = this.duration;
+    this.resetStats();
+    clearInterval(this.tickId);
+    cancelAnimationFrame(this.rafId);
+
+    this.render();
+    this.updateStats();
+    this.showOverlay(true);
+
+    $('#racePanel').hidden = !this.race;
+    if (this.race) { $('#raceYouBar').style.width = '0%'; $('#raceAiBar').style.width = '0%'; }
+
+    const cfgLabel = this.mode === 'time' ? fmtClock(this.duration) + ' time'
+      : this.mode === 'words' ? this.wordTarget + ' words'
+      : this.mode === 'code' ? 'code mode'
+      : this.mode === 'custom' ? 'custom text'
+      : this.mode;
+    $('#statProgressLabel').textContent = this.mode === 'time' ? 'Words' : this.mode === 'words' ? 'Words' : 'Words';
+    $('#overlayText').textContent = 'Mode: ' + cfgLabel + ' · The timer begins on your first keystroke.';
+  },
+
+  render() {
+    const host = $('#typingWords');
+    const frag = document.createDocumentFragment();
+    this.wordEls = [];
+    this.words.forEach((w, i) => {
+      const wEl = document.createElement('span');
+      wEl.className = 'word';
+      const letters = Array.from(w);
+      letters.forEach(ch => {
+        const lEl = document.createElement('span');
+        lEl.className = 'letter';
+        lEl.textContent = ch;
+        wEl.appendChild(lEl);
+      });
+      frag.appendChild(wEl);
+      this.wordEls.push(wEl);
+    });
+    host.innerHTML = '';
+    host.appendChild(frag);
+    host.style.transform = 'translateY(0px)';
+    this.updateCaret();
+  },
+
+  updateCaret() {
+    $$('.letter.cur, .word.cur-end').forEach(e => e.classList.remove('cur', 'cur-end'));
+    const wEl = this.wordEls[this.wi];
+    if (!wEl) return;
+    const letters = $$('.letter', wEl);
+    if (this.li < letters.length) {
+      letters[this.li].classList.add('cur');
+      kbHighlightNext(letters[this.li].textContent);
+    } else {
+      wEl.classList.add('cur-end');
+      kbHighlightNext(' ');
+    }
+  },
+
+  scroll() {
+    const wEl = this.wordEls[this.wi];
+    if (!wEl) return;
+    const top = wEl.offsetTop;
+    const host = $('#typingWords');
+    if (top > 0) host.style.transform = `translateY(${-top}px)`;
+  },
+
+  showOverlay(show) {
+    $('#typingOverlay').classList.toggle('show', !!show);
+  },
+
+  begin() {
+    if (this.active || this.finished) return;
+    this.active = true;
+    this.startTs = Date.now();
+    this.showOverlay(false);
+    this.wordStart = Date.now();
+    this.tick();
+    this.tickId = setInterval(() => this.tick(), 250);
+  },
+
+  tick() {
+    const elapsed = (Date.now() - this.startTs) / 1000;
+    if (this.mode === 'time') {
+      this.timeLeft = Math.max(0, this.duration - elapsed);
+    } else {
+      this.timeLeft = elapsed;
+    }
+    this.updateStats();
+    if (this.mode === 'time' && this.timeLeft <= 0) this.finish();
+    if (this.mode !== 'time' && this.wi >= this.words.length) this.finish();
+    if (this.race) this.updateRace(elapsed);
+  },
+
+  updateRace(elapsed) {
+    const total = this.words.length;
+    const aiWords = (this.race.wpm * 5 * elapsed) / 60 / 5;
+    const aiPct = clamp((aiWords / total) * 100, 0, 100);
+    const youPct = clamp((this.wi / total) * 100, 0, 100);
+    $('#raceYouBar').style.width = youPct + '%';
+    $('#raceAiBar').style.width = aiPct + '%';
+    $('#raceYouPct').textContent = Math.round(youPct) + '%';
+    $('#raceAiPct').textContent = Math.round(aiPct) + '%';
+    if (aiPct >= 100 && !this.finished) {
+      this.raceLost = true;
+      this.finish();
+    }
+  },
+
+  currentWpm() {
+    const mins = Math.max((Date.now() - this.startTs) / 60000, 1 / 60);
+    return Math.round((this.stats.correct / 5) / mins);
+  },
+  currentAcc() {
+    const k = this.stats.correct + this.stats.incorrect;
+    return k === 0 ? 100 : +((this.stats.correct / k) * 100).toFixed(1);
+  },
+
+  updateStats() {
+    const wpm = this.active ? this.currentWpm() : 0;
+    const acc = this.active ? this.currentAcc() : 100;
+    $('#statWpm').textContent = wpm;
+    $('#statAcc').textContent = acc.toFixed(1) + '%';
+    $('#statTime').textContent = this.mode === 'time' ? fmtClock(this.timeLeft) : fmtClock(this.timeLeft);
+    $('#statProgress').textContent = this.mode === 'time'
+      ? this.wi + ' / ' + this.words.length
+      : this.wi + ' / ' + this.words.length;
+    // sample for consistency
+    if (this.active) {
+      const t = Math.floor((Date.now() - this.startTs) / 1000);
+      if (!this.samples[t]) { this.samples[t] = wpm; }
+    }
+  },
+
+  handleKey(e) {
+    if (this.finished) return;
+
+    const key = e.key;
+
+    if (key === 'Tab') { e.preventDefault(); this.stop(); this.load(this.lastCfg || {}); return; }
+    if (key === 'Escape') { e.preventDefault(); this.stop(); this.load(this.lastCfg || {}); return; }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+    if (key === 'Backspace') {
+      e.preventDefault();
+      this.stats.backspaces++;
+      this.backspace();
+      this.updateStats();
+      return;
+    }
+
+    if (!this.active) this.begin();
+
+    if (key === ' ') {
+      e.preventDefault();
+      this.space();
+      kbPress(' ', true);
+      click(520);
+      return;
+    }
+
+    if (key.length === 1) {
+      e.preventDefault();
+      this.typeChar(key);
+      kbPress(key, true);
+      click(640);
+    }
+  },
+
+  typeChar(ch) {
+    const wEl = this.wordEls[this.wi];
+    if (!wEl) return;
+    const letters = $$('.letter', wEl);
+    const target = this.words[this.wi][this.li];
+
+    this.stats.keystrokes++;
+    this.stats.charsTyped++;
+
+    if (target === undefined) {
+      // extra characters beyond the word length
+      const extra = document.createElement('span');
+      extra.className = 'letter extra wrong';
+      extra.textContent = ch;
+      wEl.appendChild(extra);
+      this.li++;
+      this.stats.incorrect++;
+      this.stats.extraChars++;
+      this.recordKey(ch, false);
+      this.updateCaret();
+      return;
+    }
+
+    if (ch === target) {
+      letters[this.li].classList.add('correct');
+      letters[this.li].classList.remove('wrong');
+      this.stats.correct++;
+      this.recordKey(target, true);
+    } else {
+      letters[this.li].classList.add('wrong');
+      letters[this.li].classList.remove('correct');
+      this.stats.incorrect++;
+      this.recordKey(target, false);
+    }
+    this.li++;
+    this.updateCaret();
+    this.updateStats();
+  },
+
+  recordKey(ch, ok) {
+    const k = ch.toLowerCase();
+    if (!App.keyStats[k]) App.keyStats[k] = { ok: 0, err: 0 };
+    if (ok) App.keyStats[k].ok++; else App.keyStats[k].err++;
+  },
+
+  backspace() {
+    const wEl = this.wordEls[this.wi];
+    if (!wEl) return;
+    if (this.li === 0) {
+      if (this.wi > 0 && !this.wordEls[this.wi].classList.contains('locked')) {
+        // jump back to previous word
+        this.wi--;
+        const prev = this.wordEls[this.wi];
+        this.li = $$('.letter', prev).length;
+        this.updateCaret();
+        this.scroll();
+      }
+      return;
+    }
+    this.li--;
+    const letters = $$('.letter', wEl);
+    const el = letters[this.li];
+    if (el) {
+      if (el.classList.contains('extra')) el.remove();
+      else { el.classList.remove('correct', 'wrong'); }
+    }
+    this.updateCaret();
+  },
+
+  space() {
+    const wEl = this.wordEls[this.wi];
+    if (!wEl) return;
+    const letters = $$('.letter', wEl);
+    if (this.li === 0) return; // don't skip empty words
+
+    const word = this.words[this.wi];
+    const typed = letters.slice(0, word.length).map(l => l.textContent).join('');
+    const allCorrect = typed === word && letters.slice(0, word.length).every(l => l.classList.contains('correct'));
+
+    if (allCorrect) {
+      this.stats.wordsCorrect++;
+      this.stats.correct++; // count the space as correct
+    } else {
+      this.stats.wordsIncorrect++;
+    }
+
+    const spent = (Date.now() - this.wordStart) / 1000;
+    this.stats.wordTimes.push({ word, time: spent });
+    this.wordStart = Date.now();
+
+    wEl.classList.add('locked');
+    this.wi++;
+    this.li = 0;
+    this.updateCaret();
+    this.scroll();
+    this.updateStats();
+
+    // extend buffer in time mode
+    if (this.mode === 'time' && this.wi > this.words.length - 25) {
+      const pool = WORDS[this.language] || WORDS.english;
+      for (let i = 0; i < 40; i++) {
+        const w = pick(pool);
+        this.words.push(w);
+        const wEl2 = document.createElement('span');
+        wEl2.className = 'word';
+        Array.from(w).forEach(ch => {
+          const l = document.createElement('span');
+          l.className = 'letter';
+          l.textContent = ch;
+          wEl2.appendChild(l);
+        });
+        $('#typingWords').appendChild(wEl2);
+        this.wordEls.push(wEl2);
+      }
+    }
+    if (this.mode !== 'time' && this.wi >= this.words.length) this.finish();
+  },
+
+  consistency() {
+    const s = this.samples.filter(v => typeof v === 'number' && v > 0);
+    if (s.length < 3) return 100;
+    const m = avg(s);
+    if (m === 0) return 0;
+    return clamp(Math.round((1 - std(s) / m) * 100), 0, 100);
+  },
+
+  finish() {
+    if (this.finished) return;
+    this.finished = true;
+    this.active = false;
+    clearInterval(this.tickId);
+    cancelAnimationFrame(this.rafId);
+
+    const elapsedSec = Math.max((Date.now() - this.startTs) / 1000, 1);
+    const minutes = elapsedSec / 60;
+    const wpm = Math.round((this.stats.correct / 5) / minutes);
+    const raw = Math.round(((this.stats.correct + this.stats.incorrect) / 5) / minutes);
+    const acc = this.currentAcc();
+    const consist = this.consistency();
+
+    const session = {
+      id: 's' + Date.now(),
+      date: new Date().toISOString(),
+      mode: this.mode,
+      language: this.language,
+      difficulty: this.difficulty,
+      duration: Math.round(elapsedSec),
+      wpm: clamp(wpm, 0, 400),
+      raw,
+      acc: clamp(acc, 0, 100),
+      consistency: consist,
+      correct: this.stats.correct,
+      incorrect: this.stats.incorrect,
+      words: this.stats.wordsCorrect,
+      wrongWords: this.stats.wordsIncorrect,
+      backspaces: this.stats.backspaces,
+      isTest: this.isTest,
+      raceWon: this.race ? !this.raceLost : null
+    };
+
+    saveSession(session);
+    showReport(session, this.stats);
+    updateWeakKeys();
+    renderLanding();
+  },
+
+  stop() {
+    this.active = false;
+    this.finished = true;
+    clearInterval(this.tickId);
+    cancelAnimationFrame(this.rafId);
+  }
+};
+
+/* hidden input for mobile keyboards */
+const hiddenInput = $('#hiddenInput');
+document.addEventListener('keydown', e => {
+  const practiceActive = $('#view-practice').classList.contains('active');
+  if (!practiceActive) return;
+  if (document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+    if (document.activeElement !== hiddenInput) return;
+  }
+  if (document.activeElement === hiddenInput) return; // handled by its own listener
+  Typing.handleKey(e);
+});
+hiddenInput.addEventListener('keydown', e => {
+  const practiceActive = $('#view-practice').classList.contains('active');
+  if (!practiceActive) return;
+  Typing.handleKey(e);
+});
+$('#typingArea').addEventListener('click', () => { hiddenInput.focus({ preventScroll: true }); Typing.begin(); });
+$('#overlayBtn').addEventListener('click', e => { e.stopPropagation(); hiddenInput.focus({ preventScroll: true }); Typing.begin(); });
+$('#typingOverlay').addEventListener('click', () => { hiddenInput.focus({ preventScroll: true }); Typing.begin(); });
+
+/* ---------------------------------------------------------------
+   12. SESSION SAVING / STREAK / ACHIEVEMENTS
+   --------------------------------------------------------------- */
+function saveSession(session) {
+  App.sessions.push(session);
+  if (App.sessions.length > 400) App.sessions = App.sessions.slice(-400);
+
+  // streak
+  const today = todayKey();
+  if (App.streak.last !== today) {
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    const yesterday = y.toISOString().slice(0, 10);
+    App.streak.count = App.streak.last === yesterday ? App.streak.count + 1 : 1;
+    App.streak.last = today;
+  }
+
+  if (session.raceWon) App.racesWon = (App.racesWon || 0) + 1;
+
+  saveAll();
+  $('#streakNum').textContent = App.streak.count;
+  checkAchievements(session);
+}
+
+function checkAchievements(session) {
+  const totals = userTotals();
+  const u = {
+    sessions: totals.sessions,
+    totalWords: totals.totalWords,
+    totalSeconds: totals.totalSeconds,
+    streak: App.streak.count,
+    bestGameScore: App.bestGameScore,
+    racesWon: App.racesWon
+  };
+  ACHIEVEMENTS.forEach(a => {
+    if (App.unlocked[a.id]) return;
+    let ok = false;
+    try { ok = a.check(session, u); } catch (e) { ok = false; }
+    if (ok) {
+      App.unlocked[a.id] = new Date().toISOString();
+      toast('Achievement unlocked!', a.name + ' — ' + a.desc, a.icon);
+    }
+  });
+  saveAll();
+}
+
+/* ---------------------------------------------------------------
+   13. REPORT MODAL
+   --------------------------------------------------------------- */
+function showReport(session, stats) {
+  const prev = App.sessions.length > 1 ? App.sessions[App.sessions.length - 2] : null;
+  const dWpm = prev ? session.wpm - prev.wpm : 0;
+  const dAcc = prev ? (session.acc - prev.acc) : 0;
+  const delta = (v, suffix, dec) => {
+    if (!prev) return '';
+    const cls = v >= 0 ? 'delta-pos' : 'delta-neg';
+    const sign = v >= 0 ? '+' : '';
+    return `<span class="${cls}">${sign}${v.toFixed(dec || 0)}${suffix}</span>`;
+  };
+
+  const totalKeystrokes = stats.correct + stats.incorrect;
+  const errRate = totalKeystrokes ? ((stats.incorrect / totalKeystrokes) * 100).toFixed(1) : '0.0';
+
+  $('#reportBody').innerHTML = `
+    <div style="text-align:center;margin-bottom:22px">
+      <div style="font-size:38px">${session.raceWon === true ? '🏆' : session.raceWon === false ? '🤖' : '🎉'}</div>
+      <h2>${session.raceWon === true ? 'You won the race!' : session.raceWon === false ? 'TypeBot won this one' : 'Session Complete'}</h2>
+      <p class="sub" style="margin-bottom:0">${session.isTest ? 'Typing Test' : 'Practice'} · ${session.mode} mode · ${fmtClock(session.duration)}</p>
+    </div>
+
+    <div class="report-hero">
+      <div class="report-big"><b>${session.wpm}</b><span>Words per minute</span></div>
+      <div class="report-big"><b>${session.acc.toFixed(1)}%</b><span>Accuracy</span></div>
+    </div>
+
+    <div class="report-rows" style="margin-bottom:20px">
+      <div class="report-row"><span>Correct characters</span><b>${session.correct}</b></div>
+      <div class="report-row"><span>Incorrect characters</span><b>${session.incorrect}</b></div>
+      <div class="report-row"><span>Words typed</span><b>${session.words}</b></div>
+      <div class="report-row"><span>Incorrect words</span><b>${session.wrongWords}</b></div>
+      <div class="report-row"><span>Backspaces</span><b>${session.backspaces}</b></div>
+      <div class="report-row"><span>Error rate</span><b>${errRate}%</b></div>
+      <div class="report-row"><span>Consistency</span><b>${session.consistency}%</b></div>
+      <div class="report-row"><span>Raw WPM</span><b>${session.raw}</b></div>
+    </div>
+
+    ${prev ? `
+      <h3 style="font-size:14px;margin-bottom:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em">Compared to previous session</h3>
+      <div class="report-rows" style="margin-bottom:22px">
+        <div class="report-row"><span>WPM</span><b>${session.wpm} ${delta(dWpm, ' WPM')}</b></div>
+        <div class="report-row"><span>Accuracy</span><b>${session.acc.toFixed(1)}% ${delta(dAcc, '%', 1)}</b></div>
+      </div>` : ''}
+
+    <div style="background:var(--bg-soft);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:22px">
+      <b style="font-size:13.5px;display:block;margin-bottom:6px">🤖 Coach says</b>
+      <p class="hint" style="margin:0">${coachLine(session)}</p>
+    </div>
+
+    <div class="row" style="justify-content:center">
+      <button class="btn primary" id="repAgain">↻ Practice Again</button>
+      <button class="btn" id="repAnalytics">📊 View Analytics</button>
+      <button class="btn" id="repShare">📤 Share Result</button>
+    </div>
+  `;
+  $('#reportModal').classList.add('open');
+
+  $('#repAgain').onclick = () => { closeModals(); go('practice'); setTimeout(() => Typing.load(Typing.lastCfg || {}), 60); };
+  $('#repAnalytics').onclick = () => { closeModals(); go('analytics'); };
+  $('#repShare').onclick = () => shareResult(session);
+}
+
+function coachLine(s) {
+  if (s.acc < 90) return 'Your accuracy dropped below 90%. Slow down by about 15% — precision first, speed follows automatically.';
+  if (s.acc < 95) return 'Accuracy is decent but not yet automatic. Try a 2-minute accuracy drill targeting 98%.';
+  if (s.wpm > 90) return 'Excellent speed. Now focus on consistency — aim to keep variance under 10% between seconds.';
+  if (s.wpm > 60) return 'Solid pace. Push into a 5-minute session to build endurance at this speed.';
+  return 'Good foundation. Keep sessions short and frequent — 5 minutes a day beats an hour once a week.';
+}
+
+/* ---------------------------------------------------------------
+   14. SHARE CARD (canvas)
+   --------------------------------------------------------------- */
+function shareResult(session) {
+  const c = document.createElement('canvas');
+  c.width = 1000; c.height = 620;
+  const ctx = c.getContext('2d');
+
+  const grad = ctx.createLinearGradient(0, 0, 1000, 620);
+  grad.addColorStop(0, '#0b0f1a');
+  grad.addColorStop(1, '#141a2e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 1000, 620);
+
+  const rg = ctx.createRadialGradient(150, 60, 0, 150, 60, 520);
+  rg.addColorStop(0, 'rgba(124,92,255,.42)');
+  rg.addColorStop(1, 'rgba(124,92,255,0)');
+  ctx.fillStyle = rg;
+  ctx.fillRect(0, 0, 1000, 620);
+
+  const rg2 = ctx.createRadialGradient(880, 540, 0, 880, 540, 460);
+  rg2.addColorStop(0, 'rgba(34,211,238,.30)');
+  rg2.addColorStop(1, 'rgba(34,211,238,0)');
+  ctx.fillStyle = rg2;
+  ctx.fillRect(0, 0, 1000, 620);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 30px Inter, system-ui, sans-serif';
+  ctx.fillText('TYPEZEN', 60, 78);
+  ctx.fillStyle = '#7c5cff';
+  ctx.fillRect(60, 92, 132, 4);
+
+  ctx.fillStyle = 'rgba(255,255,255,.55)';
+  ctx.font = '600 17px Inter, system-ui, sans-serif';
+  ctx.fillText(session.isTest ? 'TYPING TEST RESULT' : 'PRACTICE SESSION', 60, 140);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 132px "JetBrains Mono", monospace';
+  ctx.fillText(String(session.wpm), 60, 268);
+  ctx.font = '600 26px Inter, system-ui, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,.6)';
+  ctx.fillText('WPM', 60 + ctx.measureText(String(session.wpm)).width + 180, 262);
+
+  ctx.fillStyle = '#22d3ee';
+  ctx.font = 'bold 88px "JetBrains Mono", monospace';
+  ctx.fillText(session.acc.toFixed(1) + '%', 60, 380);
+  ctx.fillStyle = 'rgba(255,255,255,.6)';
+  ctx.font = '600 22px Inter, system-ui, sans-serif';
+  ctx.fillText('ACCURACY', 60, 412);
+
+  const items = [
+    ['Consistency', session.consistency + '%'],
+    ['Words typed', session.words],
+    ['Duration', fmtClock(session.duration)],
+    ['Mode', session.mode]
+  ];
+  items.forEach((it, i) => {
+    const x = 560, y = 210 + i * 82;
+    ctx.fillStyle = 'rgba(255,255,255,.42)';
+    ctx.font = '600 15px Inter, system-ui, sans-serif';
+    ctx.fillText(String(it[0]).toUpperCase(), x, y);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 34px "JetBrains Mono", monospace';
+    ctx.fillText(String(it[1]), x, y + 42);
+  });
+
+  ctx.fillStyle = 'rgba(255,255,255,.32)';
+  ctx.font = '600 16px Inter, system-ui, sans-serif';
+  ctx.fillText('Practice. Improve. Master.', 60, 560);
+  ctx.fillText('typezen', 860, 560);
+
+  const url = c.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'typezen-result-' + session.wpm + 'wpm.png';
+  a.click();
+  toast('Result card saved', 'Your shareable image has been downloaded.', '📤');
+}
+
+/* ---------------------------------------------------------------
+   15. WEAK KEYS / PERSONALIZED PRACTICE
+   --------------------------------------------------------------- */
+function weakKeys(n) {
+  const rows = Object.entries(App.keyStats)
+    .map(([k, v]) => ({ k, total: v.ok + v.err, err: v.err, rate: v.total ? v.err / v.total : 0 }))
+    .filter(r => r.total >= 6 && /[a-z]/.test(r.k))
+    .sort((a, b) => b.rate - a.rate || b.err - a.err);
+  return rows.slice(0, n || 3);
+}
+
+function updateWeakKeys() {
+  const host = $('#weakKeys');
+  if (!host) return;
+  const w = weakKeys(6);
+  if (!w.length) {
+    host.innerHTML = '<span class="hint">Not enough data yet — complete a session to unlock personalized drills.</span>';
+    $('#weakHint').textContent = 'Complete a few sessions and TypeZen will detect exactly which keys slow you down.';
+    return;
+  }
+  host.innerHTML = w.map(r =>
+    `<div class="badge ${r.rate > .12 ? 'amber' : ''}" style="font-size:13px;padding:8px 14px">
+       <b style="font-family:var(--font-mono);font-size:15px;color:var(--text)">${esc(r.k.toUpperCase())}</b>
+       <span style="color:var(--muted)">${(r.rate * 100).toFixed(0)}% err</span>
+     </div>`
+  ).join('');
+  $('#weakHint').textContent = 'These keys have your highest error rate. Generate a drill containing them.';
+}
+
+function generateWeakDrill() {
+  const w = weakKeys(5).map(r => r.k);
+  const keys = w.length ? w : ['q', 'p', 'z'];
+  const pool = WORDS[App.settings.language] || WORDS.english;
+  const hits = pool.filter(word => keys.some(k => word.includes(k)));
+  const source = hits.length >= 12 ? hits : pool;
+  const out = [];
+  for (let i = 0; i < 60; i++) out.push(pick(source));
+  // sprinkle pure key sequences
+  for (let i = 0; i < 6; i++) {
+    out.splice(rand(out.length), 0, keys.join('') + keys.slice().reverse().join(''));
+  }
+  Typing.lastCfg = { mode: 'custom', text: out.join(' '), difficulty: 'medium' };
+  go('practice');
+  setModeUI('custom');
+  setTimeout(() => Typing.load(Typing.lastCfg), 80);
+  toast('Personalized drill generated', 'Focus keys: ' + keys.map(k => k.toUpperCase()).join(', '), '🎯');
+}
+$('#weakDrillBtn').addEventListener('click', generateWeakDrill);
+
+/* ---------------------------------------------------------------
+   16. PRACTICE VIEW WIRING
+   --------------------------------------------------------------- */
+const AMOUNTS = {
+  time:     [15, 30, 60, 120, 300, 600],
+  words:    [10, 25, 50, 100, 250],
+  quote:    [0],
+  paragraph:[0],
+  code:     [0],
+  custom:   [0]
+};
+const AMOUNT_LABEL = {
+  time: v => v < 60 ? v + 's' : (v / 60) + 'm',
+  words: v => v + 'w',
+  quote: () => 'Random',
+  paragraph: () => 'Random',
+  code: () => 'Random',
+  custom: () => 'Your text'
+};
+
+let currentMode = 'time';
+let currentAmount = 60;
+
+function setModeUI(mode) {
+  currentMode = mode;
+  $$('#modeChips .chip').forEach(c => c.classList.toggle('active', c.dataset.mode === mode));
+  const list = AMOUNTS[mode] || [0];
+  const chips = $('#amountChips');
+  const hide = ['quote', 'paragraph', 'code', 'custom'].includes(mode);
+  $('#amountGroup').style.display = hide ? 'none' : 'flex';
+  chips.innerHTML = list.map((v, i) =>
+    `<span class="chip ${i === (mode === 'time' ? 2 : 1) ? 'active' : ''}" data-amount="${v}">${AMOUNT_LABEL[mode](v)}</span>`
+  ).join('');
+  currentAmount = list[mode === 'time' ? 2 : 1] ?? list[0];
+  $('#customPanel').hidden = mode !== 'custom';
+  $$('#amountChips .chip').forEach(c => c.addEventListener('click', () => {
+    $$('#amountChips .chip').forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+    currentAmount = parseInt(c.dataset.amount, 10);
+    startPractice();
+  }));
+}
+
+function startPractice() {
+  const cfg = {
+    mode: currentMode,
+    duration: currentMode === 'time' ? currentAmount : 60,
+    wordTarget: currentMode === 'words' ? currentAmount : 25,
+    language: $('#langSelect').value,
+    difficulty: 'medium'
+  };
+  if (currentMode === 'custom') {
+    const txt = $('#customText').value.trim();
+    if (!txt) { toast('No text', 'Paste or type some text first.', '✏️'); $('#customText').focus(); return; }
+    cfg.text = txt;
+  }
+  Typing.lastCfg = cfg;
+  App.settings.language = cfg.language;
+  saveAll();
+  Typing.load(cfg);
+  hiddenInput.focus({ preventScroll: true });
+}
+
+$$('#modeChips .chip').forEach(c => c.addEventListener('click', () => {
+  setModeUI(c.dataset.mode);
+  if (c.dataset.mode !== 'custom') startPractice();
+}));
+$('#langSelect').addEventListener('change', startPractice);
+$('#restartBtn').addEventListener('click', () => { Typing.load(Typing.lastCfg || {}); hiddenInput.focus({ preventScroll: true }); });
+$('#kbToggle').addEventListener('click', () => {
+  App.settings.showKeyboard = !App.settings.showKeyboard;
+  saveAll(); applySettings();
+});
+$('#focusToggle').addEventListener('click', () => {
+  App.settings.focusMode = !App.settings.focusMode;
+  saveAll(); applySettings();
+  toast(App.settings.focusMode ? 'Focus mode on' : 'Focus mode off', App.settings.focusMode ? 'Press the button again to exit.' : '', '🎯');
+});
+$('#customStart').addEventListener('click', startPractice);
+$('#customSave').addEventListener('click', () => {
+  const txt = $('#customText').value.trim();
+  if (!txt) { toast('Nothing to save', 'Type or paste some text first.', '✏️'); return; }
+  const name = prompt('Name this passage:', 'My passage ' + (App.library.length + 1));
+  if (!name) return;
+  App.library.push({ id: 'lib' + Date.now(), name, text: txt });
+  saveAll(); renderLibrary();
+  toast('Saved to library', name, '💾');
+});
+function renderLibrary() {
+  const sel = $('#librarySelect');
+  sel.innerHTML = App.library.length
+    ? App.library.map(l => `<option value="${l.id}">${esc(l.name)}</option>`).join('')
+    : '<option value="">— empty —</option>';
+}
+$('#libraryLoad').addEventListener('click', () => {
+  const id = $('#librarySelect').value;
+  const item = App.library.find(l => l.id === id);
+  if (!item) { toast('Nothing to load', 'Save a passage first.', '📚'); return; }
+  $('#customText').value = item.text;
+  startPractice();
+});
+$('#libraryDelete').addEventListener('click', () => {
+  const id = $('#librarySelect').value;
+  App.library = App.library.filter(l => l.id !== id);
+  saveAll(); renderLibrary();
+  toast('Deleted', 'Passage removed from your library.', '🗑️');
+});
+
+/* ---------------------------------------------------------------
+   17. TEST VIEW
+   --------------------------------------------------------------- */
+let testCfg = { duration: 60, difficulty: 'medium', content: 'words' };
+function chipGroup(sel, key, cb) {
+  $$(sel + ' .chip').forEach(c => c.addEventListener('click', () => {
+    $$(sel + ' .chip').forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+    testCfg[key] = isNaN(+c.dataset.v) ? c.dataset.v : +c.dataset.v;
+    updateTestSummary();
+    if (cb) cb();
+  }));
+}
+chipGroup('#testDuration', 'duration');
+chipGroup('#testDifficulty', 'difficulty');
+chipGroup('#testContent', 'content');
+function updateTestSummary() {
+  const labels = { words: 'Common words', quote: 'Quotes', paragraph: 'Passages', code: 'Code' };
+  $('#testSummary').textContent =
+    (testCfg.duration < 60 ? testCfg.duration + ' seconds' : (testCfg.duration / 60) + ' minute' + (testCfg.duration > 60 ? 's' : '')) +
+    ' · ' + testCfg.difficulty.charAt(0).toUpperCase() + testCfg.difficulty.slice(1) +
+    ' · ' + labels[testCfg.content];
+  const best = App.sessions.length ? Math.max(...App.sessions.map(s => s.wpm)) : 0;
+  $('#testBest').innerHTML = best + ' <span style="font-size:14px;color:var(--muted)">WPM</span>';
+}
+$('#startTestBtn').addEventListener('click', () => {
+  const cfg = {
+    mode: testCfg.content === 'words' ? 'time' : testCfg.content,
+    duration: testCfg.duration,
+    difficulty: testCfg.difficulty,
+    language: 'english',
+    isTest: true
+  };
+  Typing.lastCfg = cfg;
+  go('practice');
+  setModeUI(cfg.mode);
+  setTimeout(() => { Typing.load(cfg); hiddenInput.focus({ preventScroll: true }); }, 80);
+  toast('Test started', 'Good luck — the clock starts on your first keystroke.', '🏁');
+});
+
+/* ---------------------------------------------------------------
+   18. GAMES
+   --------------------------------------------------------------- */
+const Game = {
+  running: false,
+  raf: null,
+  last: 0,
+  spawnTimer: 0,
+  items: [],
+  score: 0,
+  lives: 3,
+  time: 60,
+  buffer: '',
+  streak: 0,
+
+  start() {
+    this.quit();
+    this.running = true;
+    this.items = [];
+    this.score = 0;
+    this.lives = 3;
+    this.time = 60;
+    this.buffer = '';
+    this.streak = 0;
+    this.spawnTimer = 0;
+    this.last = performance.now();
+
+    $('#gameCard').hidden = false;
+    $('#gameStage').querySelectorAll('.falling').forEach(e => e.remove());
+    this.hud();
+    this.loop(this.last);
+    this.keyHandler = e => this.onKey(e);
+    document.addEventListener('keydown', this.keyHandler);
+    $('#gameCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  },
+
+  quit() {
+    if (!this.running) return;
+    this.running = false;
+    cancelAnimationFrame(this.raf);
+    document.removeEventListener('keydown', this.keyHandler);
+  },
+
+  hud() {
+    $('#gScore').textContent = this.score;
+    $('#gTime').textContent = Math.ceil(this.time);
+    $('#gLives').textContent = '❤'.repeat(this.lives) + '·'.repeat(Math.max(0, 3 - this.lives));
+    $('#gStreak').textContent = this.streak;
+    $('#gBuffer').textContent = this.buffer || '\u00a0';
+  },
+
+  spawn() {
+    const stage = $('#gameStage');
+    const w = stage.clientWidth;
+    const text = pick(WORDS.english.filter(x => x.length <= 9));
+    const el = document.createElement('div');
+    el.className = 'falling';
+    el.textContent = text;
+    el.style.left = rand(Math.max(20, w - 150)) + 'px';
+    el.style.top = '-40px';
+    stage.appendChild(el);
+    this.items.push({ el, text, y: -40, speed: 32 + Math.random() * 28 + (60 - this.time) * 0.55 });
+  },
+
+  loop(ts) {
+    if (!this.running) return;
+    const dt = Math.min((ts - this.last) / 1000, 0.05);
+    this.last = ts;
+
+    this.time -= dt;
+    if (this.time <= 0) { this.end('Time up!'); return; }
+
+    this.spawnTimer -= dt;
+    const interval = Math.max(0.55, 1.55 - (60 - this.time) * 0.012);
+    if (this.spawnTimer <= 0 && this.items.length < 7) { this.spawn(); this.spawnTimer = interval; }
+
+    const h = $('#gameStage').clientHeight;
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      const it = this.items[i];
+      it.y += it.speed * dt;
+      it.el.style.top = it.y + 'px';
+      it.el.classList.toggle('danger', it.y > h - 130);
+      if (it.y > h - 34) {
+        it.el.remove();
+        this.items.splice(i, 1);
+        this.lives--;
+        this.streak = 0;
+        click(180);
+        if (this.lives <= 0) { this.end('Game over!'); return; }
+      }
+    }
+    this.hud();
+    this.raf = requestAnimationFrame(t => this.loop(t));
+  },
+
+  onKey(e) {
+    if (!this.running) return;
+    if (e.key === 'Escape') { this.quit(); this.hud(); return; }
+    if (e.key === 'Backspace') { e.preventDefault(); this.buffer = this.buffer.slice(0, -1); this.hud(); return; }
+    if (e.key.length !== 1) return;
+    e.preventDefault();
+    this.buffer += e.key.toLowerCase();
+
+    // exact match?
+    const hit = this.items.find(it => it.text === this.buffer);
+    if (hit) {
+      this.score += hit.text.length * 5 + 10;
+      this.streak++;
+      hit.el.remove();
+      this.items.splice(this.items.indexOf(hit), 1);
+      this.buffer = '';
+      click(900);
+      this.hud();
+      return;
+    }
+    // prefix match?
+    const anyPrefix = this.items.some(it => it.text.startsWith(this.buffer));
+    if (!anyPrefix) { this.buffer = ''; click(200); }
+    this.items.forEach(it => it.el.classList.toggle('hit', this.buffer.length > 0 && it.text.startsWith(this.buffer)));
+    this.hud();
+  },
+
+  end(reason) {
+    this.quit();
+    if (this.score > App.bestGameScore) { App.bestGameScore = this.score; saveAll(); }
+    checkAchievements(null);
+    toast(reason, 'Score: ' + this.score + ' · Streak: ' + this.streak, '🎮');
+    $('#gBuffer').textContent = '\u00a0';
+    this.items.forEach(i => i.el.remove());
+    this.items = [];
+  }
+};
+$('#gQuit').addEventListener('click', () => Game.quit());
+
+$$('[data-game]').forEach(b => b.addEventListener('click', () => {
+  if (b.dataset.game === 'rush') Game.start();
+  if (b.dataset.game === 'race') {
+    let ai = 60;
+    $$('#view-games [data-ai]').forEach(c => { if (c.classList.contains('active')) ai = +c.dataset.ai; });
+    const passage = pick(PASSAGES.medium);
+    const cfg = { mode: 'custom', text: passage, race: { wpm: ai }, isTest: false };
+    Typing.lastCfg = cfg;
+    go('practice');
+    setModeUI('custom');
+    setTimeout(() => { Typing.load(cfg); hiddenInput.focus({ preventScroll: true }); }, 80);
+    toast('Race started', 'TypeBot is typing at ' + ai + ' WPM. Beat it!', '🏎️');
+  }
+}));
+$$('#view-games [data-ai]').forEach(c => c.addEventListener('click', () => {
+  $$('#view-games [data-ai]').forEach(x => x.classList.remove('active'));
+  c.classList.add('active');
+}));
+
+/* ---------------------------------------------------------------
+   19. COURSES
+   --------------------------------------------------------------- */
+function renderCourses() {
+  const grid = $('#courseGrid');
+  if (!grid) return;
+  grid.innerHTML = COURSES.map(course => {
+    const done = course.lessons.filter(l => App.lessonProgress[l.id]).length;
+    const pct = Math.round((done / course.lessons.length) * 100);
+    const complete = done === course.lessons.length;
+    return `
+      <div class="card">
+        <div class="row" style="justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+          <div class="row" style="gap:12px;align-items:center">
+            <div style="font-size:28px">${course.icon}</div>
+            <div>
+              <h3 style="font-size:17px">${esc(course.title)}</h3>
+              <span class="badge purple" style="margin-top:5px">${esc(course.level)}</span>
+            </div>
+          </div>
+          <span class="badge ${complete ? 'green' : ''}">${done}/${course.lessons.length}</span>
+        </div>
+        <p class="hint" style="margin-bottom:16px">${esc(course.desc)}</p>
+        <div class="progress" style="margin-bottom:18px"><i style="width:${pct}%"></i></div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${course.lessons.map((l, i) => `
+            <div class="lesson ${App.lessonProgress[l.id] ? 'done' : ''}" data-course="${course.id}" data-lesson="${l.id}">
+              <div class="tick">✓</div>
+              <div style="flex:1">
+                <div style="font-size:13.5px;font-weight:650">${esc(l.name)}</div>
+                <div class="hint">Lesson ${i + 1}</div>
+              </div>
+              <span style="color:var(--muted);font-size:16px">›</span>
+            </div>`).join('')}
+        </div>
+        ${complete ? `<button class="btn primary" style="width:100%;margin-top:16px" data-cert="${course.id}">🎓 Get Certificate</button>` : ''}
+      </div>`;
+  }).join('');
+
+  $$('#courseGrid [data-lesson]').forEach(el => el.addEventListener('click', () => {
+    const course = COURSES.find(c => c.id === el.dataset.course);
+    const lesson = course.lessons.find(l => l.id === el.dataset.lesson);
+    App.lessonProgress[lesson.id] = true;
+    saveAll();
+    const cfg = { mode: 'custom', text: lesson.text, difficulty: 'medium' };
+    Typing.lastCfg = cfg;
+    go('practice');
+    setModeUI('custom');
+    setTimeout(() => { Typing.load(cfg); hiddenInput.focus({ preventScroll: true }); }, 80);
+    toast('Lesson started', lesson.name, '📚');
+  }));
+
+  $$('#courseGrid [data-cert]').forEach(b => b.addEventListener('click', () => {
+    const course = COURSES.find(c => c.id === b.dataset.cert);
+    showCertificate(course);
+  }));
+}
+
+function showCertificate(course) {
+  const best = App.sessions.length ? Math.max(...App.sessions.map(s => s.wpm)) : 0;
+  const accs = App.sessions.map(s => s.acc);
+  const bestAcc = accs.length ? Math.max(...accs) : 0;
+  const name = App.user ? App.user.name : 'TypeZen Learner';
+  const certId = 'TZ-' + course.id.toUpperCase() + '-' + (simpleHash(name + course.id).slice(1, 8)).toUpperCase();
+  const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  $('#certBody').innerHTML = `
+    <div id="certCard" style="background:linear-gradient(140deg,#0b0f1a,#161d33);border-radius:16px;padding:44px;text-align:center;color:#fff;position:relative;overflow:hidden">
+      <div style="position:absolute;inset:16px;border:2px solid rgba(124,92,255,.45);border-radius:12px;pointer-events:none"></div>
+      <div style="position:relative">
+        <div style="font-size:13px;letter-spacing:.3em;color:#7c5cff;font-weight:800;margin-bottom:6px">TYPEZEN</div>
+        <div style="font-size:11px;letter-spacing:.22em;color:rgba(255,255,255,.45);margin-bottom:30px">PRACTICE · IMPROVE · MASTER</div>
+        <div style="font-size:26px;font-weight:700;margin-bottom:8px">Certificate of Typing Proficiency</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:26px">This certifies that</div>
+        <div style="font-size:36px;font-weight:800;background:linear-gradient(120deg,#7c5cff,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:24px">${esc(name)}</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:26px">has successfully completed</div>
+        <div style="font-size:19px;font-weight:700;margin-bottom:28px">${esc(course.title)}</div>
+        <div style="display:flex;justify-content:center;gap:44px;margin-bottom:30px">
+          <div><div style="font-family:var(--font-mono);font-size:30px;font-weight:700">${best}</div><div style="font-size:10px;letter-spacing:.16em;color:rgba(255,255,255,.45)">BEST WPM</div></div>
+          <div><div style="font-family:var(--font-mono);font-size:30px;font-weight:700">${bestAcc.toFixed(1)}%</div><div style="font-size:10px;letter-spacing:.16em;color:rgba(255,255,255,.45)">BEST ACCURACY</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.45);border-top:1px solid rgba(255,255,255,.12);padding-top:18px">
+          <span>Issued ${esc(date)}</span>
+          <span>ID ${esc(certId)}</span>
+        </div>
+      </div>
+    </div>
+    <div class="row" style="justify-content:center;margin-top:22px">
+      <button class="btn primary" id="certDownload">⬇ Download Certificate</button>
+      <button class="btn" onclick="document.getElementById('certModal').classList.remove('open')">Close</button>
+    </div>
+  `;
+  $('#certModal').classList.add('open');
+
+  $('#certDownload').onclick = () => {
+    const c = document.createElement('canvas');
+    c.width = 1400; c.height = 990;
+    const ctx = c.getContext('2d');
+    const g = ctx.createLinearGradient(0, 0, 1400, 990);
+    g.addColorStop(0, '#0b0f1a'); g.addColorStop(1, '#161d33');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 1400, 990);
+    ctx.strokeStyle = 'rgba(124,92,255,.5)'; ctx.lineWidth = 3;
+    ctx.strokeRect(40, 40, 1320, 910);
+    ctx.strokeStyle = 'rgba(124,92,255,.2)'; ctx.lineWidth = 1;
+    ctx.strokeRect(58, 58, 1284, 874);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#7c5cff';
+    ctx.font = 'bold 22px Inter, sans-serif';
+    ctx.fillText('TYPEZEN', 700, 150);
+    ctx.fillStyle = 'rgba(255,255,255,.45)';
+    ctx.font = '600 14px Inter, sans-serif';
+    ctx.fillText('PRACTICE · IMPROVE · MASTER', 700, 182);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 46px Inter, sans-serif';
+    ctx.fillText('Certificate of Typing Proficiency', 700, 290);
+
+    ctx.fillStyle = 'rgba(255,255,255,.5)';
+    ctx.font = '600 18px Inter, sans-serif';
+    ctx.fillText('This certifies that', 700, 350);
+
+    ctx.fillStyle = '#22d3ee';
+    ctx.font = 'bold 64px Inter, sans-serif';
+    ctx.fillText(name, 700, 440);
+
+    ctx.fillStyle = 'rgba(255,255,255,.5)';
+    ctx.font = '600 18px Inter, sans-serif';
+    ctx.fillText('has successfully completed', 700, 500);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 32px Inter, sans-serif';
+    ctx.fillText(course.title, 700, 560);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 54px "JetBrains Mono", monospace';
+    ctx.fillText(String(best), 520, 690);
+    ctx.fillText(bestAcc.toFixed(1) + '%', 880, 690);
+    ctx.fillStyle = 'rgba(255,255,255,.42)';
+    ctx.font = '600 14px Inter, sans-serif';
+    ctx.fillText('BEST WPM', 520, 720);
+    ctx.fillText('BEST ACCURACY', 880, 720);
+
+    ctx.fillStyle = 'rgba(255,255,255,.4)';
+    ctx.font = '600 16px Inter, sans-serif';
+    ctx.fillText('Issued ' + date, 340, 860);
+    ctx.fillText('ID ' + certId, 1040, 860);
+
+    const a = document.createElement('a');
+    a.href = c.toDataURL('image/png');
+    a.download = 'typezen-certificate.png';
+    a.click();
+  };
+}
+
+/* ---------------------------------------------------------------
+   20. CHART HELPERS
+   --------------------------------------------------------------- */
+function setupCanvas(cv) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth || 400;
+  const h = cv.clientHeight || 200;
+  cv.width = w * dpr; cv.height = h * dpr;
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  return { ctx, w, h };
+}
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+function lineChart(cv, values, opts) {
+  opts = opts || {};
+  const { ctx, w, h } = setupCanvas(cv);
+  const border = cssVar('--border') || '#222';
+  const muted = cssVar('--muted') || '#888';
+  const accent = opts.color || cssVar('--accent') || '#7c5cff';
+
+  if (!values || values.length < 1) {
+    ctx.fillStyle = muted;
+    ctx.font = '13px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data yet — complete a session to see your trend.', w / 2, h / 2);
+    return;
+  }
+
+  const pad = { l: 40, r: 14, t: 14, b: 26 };
+  const iw = w - pad.l - pad.r;
+  const ih = h - pad.t - pad.b;
+  const maxV = Math.max(...values) * 1.15 || 10;
+  const minV = opts.min !== undefined ? opts.min : 0;
+
+  // grid
+  ctx.strokeStyle = border;
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + (ih / 4) * i;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+    ctx.fillStyle = muted;
+    ctx.font = '10px Inter, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round(maxV - (maxV - minV) * (i / 4)), pad.l - 8, y + 3);
+  }
+
+  const pt = (v, i) => ({
+    x: pad.l + (values.length === 1 ? iw / 2 : (iw * i) / (values.length - 1)),
+    y: pad.t + ih - ((v - minV) / (maxV - minV || 1)) * ih
+  });
+
+  // area
+  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ih);
+  grad.addColorStop(0, accent + '55');
+  grad.addColorStop(1, accent + '00');
+  ctx.beginPath();
+  values.forEach((v, i) => { const p = pt(v, i); i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y); });
+  ctx.lineTo(pt(values[values.length - 1], values.length - 1).x, pad.t + ih);
+  ctx.lineTo(pt(values[0], 0).x, pad.t + ih);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // line
+  ctx.beginPath();
+  values.forEach((v, i) => { const p = pt(v, i); i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y); });
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // points
+  values.forEach((v, i) => {
+    const p = pt(v, i);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = accent;
+    ctx.fill();
+  });
+}
+function barChart(cv, labels, values) {
+  const { ctx, w, h } = setupCanvas(cv);
+  const border = cssVar('--border') || '#222';
+  const muted = cssVar('--muted') || '#888';
+  const accent = cssVar('--accent') || '#7c5cff';
+
+  if (!values.length) {
+    ctx.fillStyle = muted; ctx.font = '13px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('No activity yet.', w / 2, h / 2); return;
+  }
+  const pad = { l: 34, r: 12, t: 14, b: 26 };
+  const iw = w - pad.l - pad.r;
+  const ih = h - pad.t - pad.b;
+  const maxV = Math.max(...values) * 1.2 || 1;
+  const bw = iw / values.length;
+
+  ctx.strokeStyle = border;
+  for (let i = 0; i <= 3; i++) {
+    const y = pad.t + (ih / 3) * i;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+  }
+  values.forEach((v, i) => {
+    const bh = (v / maxV) * ih;
+    const x = pad.l + i * bw + bw * 0.18;
+    const bwid = bw * 0.64;
+    const g = ctx.createLinearGradient(0, pad.t + ih - bh, 0, pad.t + ih);
+    g.addColorStop(0, accent);
+    g.addColorStop(1, accent + '44');
+    ctx.fillStyle = g;
+    const r = Math.min(5, bwid / 2);
+    const y = pad.t + ih - bh;
+    ctx.beginPath();
+    ctx.moveTo(x, pad.t + ih);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.lineTo(x + bwid - r, y);
+    ctx.quadraticCurveTo(x + bwid, y, x + bwid, y + r);
+    ctx.lineTo(x + bwid, pad.t + ih);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = muted;
+    ctx.font = '9px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    if (labels[i]) ctx.fillText(labels[i], x + bwid / 2, h - 8);
+  });
+}
+
+/* ---------------------------------------------------------------
+   21. LANDING PAGE RENDER
+   --------------------------------------------------------------- */
+const MODE_CARDS = [
+  { icon: '⏱️', title: 'Time Mode', desc: '15s to 10 minutes. Race the clock and build raw speed.' },
+  { icon: '🔤', title: 'Word Mode', desc: '10 to 250 words. Finish a fixed set with precision.' },
+  { icon: '❝', title: 'Quote Mode', desc: 'Type famous quotes and motivational passages.' },
+  { icon: '📄', title: 'Paragraph Mode', desc: 'Easy, medium, hard and expert-level passages.' },
+  { icon: '💻', title: 'Code Mode', desc: 'Real Python, JS, SQL and C snippets.' },
+  { icon: '✏️', title: 'Custom Mode', desc: 'Paste your own text and practise exactly that.' },
+  { icon: '🎯', title: 'Weak-Key Drill', desc: 'Auto-generated drills targeting your worst keys.' },
+  { icon: '🌍', title: 'Multi-Language', desc: 'English, বাংলা, हिन्दी, Español and Français.' }
+];
+function renderLanding() {
+  // hero stats
+  const best = App.sessions.length ? Math.max(...App.sessions.map(s => s.wpm)) : 0;
+  const accs = App.sessions.map(s => s.acc);
+  const bestAcc = accs.length ? Math.max(...accs) : 0;
+  const totals = userTotals();
+  $('#heroBest').textContent = best;
+  $('#heroAcc').textContent = bestAcc.toFixed(1) + '%';
+  $('#heroStreak').textContent = App.streak.count || 0;
+  $('#heroWords').textContent = totals.totalWords.toLocaleString();
+
+  // mode grid
+  $('#modeGrid').innerHTML = MODE_CARDS.map(m => `
+    <div class="card hoverable" style="cursor:pointer" data-view="practice">
+      <div style="font-size:24px;margin-bottom:10px">${m.icon}</div>
+      <h3 style="font-size:15.5px;margin-bottom:6px">${m.title}</h3>
+      <p class="hint">${m.desc}</p>
+    </div>`).join('');
+
+  // daily challenge
+  const today = todayKey();
+  const todaySessions = App.sessions.filter(s => s.date.slice(0, 10) === today);
+  const done = todaySessions.some(s => s.wpm >= 60 && s.acc >= 95);
+  $('#dailyBar').style.width = done ? '100%' : (todaySessions.length ? '50%' : '0%');
+  $('#dailyStatus').innerHTML = done
+    ? '✅ <b style="color:var(--correct)">Completed!</b> Come back tomorrow.'
+    : todaySessions.length
+      ? 'In progress — you have practised today. Hit 60 WPM @ 95% to complete.'
+      : 'Not completed yet today.';
+
+  // chart
+  const last7 = App.sessions.slice(-7).map(s => s.wpm);
+  const lc = $('#landingChart');
+  if (lc) lineChart(lc, last7, {});
+
+  // leaderboard preview
+  const top = FAKE_LB.slice(0, 5);
+  $('#landingLb').innerHTML = top.map((u, i) => `
+    <div style="display:flex;align-items:center;gap:12px;font-size:13.5px">
+      <span style="width:22px;color:var(--muted);font-weight:800;font-family:var(--font-mono)">${i + 1}</span>
+      <span style="flex:1;font-weight:650">${esc(u.name)}</span>
+      <span style="color:var(--muted)">${u.country}</span>
+      <span style="font-family:var(--font-mono);font-weight:700">${u.wpm}</span>
+    </div>`).join('');
+
+  // achievements preview
+  $('#landingAch').innerHTML = ACHIEVEMENTS.slice(0, 8).map(a => {
+    const un = !!App.unlocked[a.id];
+    return `<div class="ach ${un ? 'unlocked' : 'locked'}">
+      <div class="ico">${a.icon}</div>
+      <div><b>${a.name}</b><small>${a.desc}</small></div>
+    </div>`;
+  }).join('');
+}
+$('#dailyBtn').addEventListener('click', () => {
+  const cfg = { mode: 'time', duration: 300, language: 'english', difficulty: 'medium' };
+  Typing.lastCfg = cfg;
+  go('practice');
+  setModeUI('time');
+  setTimeout(() => { Typing.load(cfg); hiddenInput.focus({ preventScroll: true }); }, 80);
+});
+
+/* quick practice chips */
+$$('#qpChips .chip').forEach(c => c.addEventListener('click', () => {
+  $$('#qpChips .chip').forEach(x => x.classList.remove('active'));
+  c.classList.add('active');
+  $('#qpTime').textContent = fmtClock(+c.dataset.sec);
+}));
+$('#qpStart').addEventListener('click', () => {
+  const sec = +($('#qpChips .chip.active').dataset.sec || 60);
+  const cfg = { mode: 'time', duration: sec, language: App.settings.language };
+  Typing.lastCfg = cfg;
+  go('practice');
+  setModeUI('time');
+  setTimeout(() => { Typing.load(cfg); hiddenInput.focus({ preventScroll: true }); }, 80);
+});
+
+/* ---------------------------------------------------------------
+   22. DASHBOARD
+   --------------------------------------------------------------- */
+function renderDashboard() {
+  const root = $('#dashboardRoot');
+  const totals = userTotals();
+  const best = App.sessions.length ? Math.max(...App.sessions.map(s => s.wpm)) : 0;
+  const avgW = Math.round(avg(App.sessions.map(s => s.wpm))) || 0;
+  const avgA = App.sessions.length ? avg(App.sessions.map(s => s.acc)) : 0;
+  const current = App.sessions.length ? App.sessions[App.sessions.length - 1].wpm : 0;
+  const goal = App.settings.goalWpm || 80;
+  const goalPct = clamp(Math.round((current / goal) * 100), 0, 100);
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const name = App.user ? App.user.name.split(' ')[0] : 'there';
+
+  const today = todayKey();
+  const todayMin = Math.round(App.sessions.filter(s => s.date.slice(0, 10) === today).reduce((a, s) => a + s.duration, 0) / 60);
+  const dailyGoalPct = clamp(Math.round((todayMin / 10) * 100), 0, 100);
+
+  const weak = weakKeys(3);
+
+  root.innerHTML = `
+    <div class="row" style="justify-content:space-between;align-items:flex-end;margin-bottom:24px">
+      <div>
+        <h2 style="font-size:28px;letter-spacing:-.02em">${greet}, ${esc(name)} 👋</h2>
+        <p class="hint" style="margin-top:6px">Keep your streak alive! 🔥 ${App.streak.count || 0} day${App.streak.count === 1 ? '' : 's'} strong.</p>
+      </div>
+      <button class="btn primary lg" data-view="practice">Start Practice</button>
+    </div>
+
+    <div class="grid g4" style="margin-bottom:20px">
+      <div class="stat"><b>${current}</b><span>Current WPM</span></div>
+      <div class="stat"><b>${avgA.toFixed(1)}%</b><span>Accuracy</span></div>
+      <div class="stat"><b>${App.streak.count || 0}</b><span>Day Streak</span></div>
+      <div class="stat"><b>${fmtMinutes(totals.totalSeconds / 60)}</b><span>Practice Time</span></div>
+    </div>
+
+    <div class="grid g3" style="margin-bottom:20px">
+      <div class="card">
+        <div class="eyebrow">Today's Goal</div>
+        <h3 style="font-size:17px;margin-bottom:14px">${todayMin} / 10 minutes</h3>
+        <div class="progress"><i style="width:${dailyGoalPct}%"></i></div>
+        <p class="hint" style="margin-top:12px">${dailyGoalPct >= 100 ? '✅ Goal complete for today!' : 'Keep going — ' + (10 - todayMin) + ' minute(s) to go.'}</p>
+      </div>
+      <div class="card">
+        <div class="eyebrow">WPM Goal</div>
+        <h3 style="font-size:17px;margin-bottom:14px">${current} / ${goal} WPM</h3>
+        <div class="progress"><i style="width:${goalPct}%"></i></div>
+        <p class="hint" style="margin-top:12px">${goalPct >= 100 ? '🎉 Goal reached!' : goalPct + '% of the way there.'}</p>
+      </div>
+      <div class="card">
+        <div class="eyebrow">Weak Keys</div>
+        <h3 style="font-size:17px;margin-bottom:14px">Needs attention</h3>
+        <div class="row">
+          ${weak.length
+            ? weak.map(w => `<span class="badge amber" style="font-family:var(--font-mono);font-size:15px;padding:8px 14px">${esc(w.k.toUpperCase())}</span>`).join('')
+            : '<span class="hint">Complete a session to detect weak keys.</span>'}
+        </div>
+        ${weak.length ? '<button class="btn sm" style="margin-top:14px" id="dashDrill">Generate drill →</button>' : ''}
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-bottom:20px">
+      <div class="card"><h3 style="font-size:15px;margin-bottom:14px">📈 WPM trend</h3><canvas class="chart" id="dashWpm" style="height:180px"></canvas></div>
+      <div class="card"><h3 style="font-size:15px;margin-bottom:14px">🎯 Accuracy trend</h3><canvas class="chart" id="dashAcc" style="height:180px"></canvas></div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px">
+      <div class="row" style="justify-content:space-between;margin-bottom:16px">
+        <h3 style="font-size:16px">Recent Tests</h3>
+        <button class="btn sm" data-view="analytics">View all →</button>
+      </div>
+      ${App.sessions.length ? `
+        <table>
+          <thead><tr><th>Date</th><th>Mode</th><th>Duration</th><th style="text-align:right">WPM</th><th style="text-align:right">Accuracy</th></tr></thead>
+          <tbody>
+            ${App.sessions.slice(-8).reverse().map(s => `
+              <tr>
+                <td>${new Date(s.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</td>
+                <td><span class="badge">${esc(s.mode)}</span></td>
+                <td>${fmtClock(s.duration)}</td>
+                <td style="text-align:right;font-family:var(--font-mono);font-weight:700">${s.wpm}</td>
+                <td style="text-align:right;font-family:var(--font-mono)">${s.acc.toFixed(1)}%</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>` : '<div class="empty"><span class="big">⌨️</span>No sessions yet. Start typing to build your history.</div>'}
+    </div>
+
+    <div class="card">
+      <h3 style="font-size:16px;margin-bottom:16px">🏆 Achievements</h3>
+      <div class="grid g4">
+        ${ACHIEVEMENTS.slice(0, 8).map(a => {
+          const un = !!App.unlocked[a.id];
+          return `<div class="ach ${un ? 'unlocked' : 'locked'}"><div class="ico">${a.icon}</div><div><b>${a.name}</b><small>${a.desc}</small></div></div>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
+
+  lineChart($('#dashWpm'), App.sessions.slice(-20).map(s => s.wpm), {});
+  lineChart($('#dashAcc'), App.sessions.slice(-20).map(s => s.acc), { color: cssVar('--accent-2') || '#22d3ee', min: 50 });
+
+  const dd = $('#dashDrill');
+  if (dd) dd.onclick = generateWeakDrill;
+}
+
+/* ---------------------------------------------------------------
+   23. ANALYTICS
+   --------------------------------------------------------------- */
+function renderAnalytics() {
+  const s = App.sessions;
+  const totals = userTotals();
+  const best = s.length ? Math.max(...s.map(x => x.wpm)) : 0;
+  const avgW = Math.round(avg(s.map(x => x.wpm))) || 0;
+  const avgA = s.length ? avg(s.map(x => x.acc)) : 0;
+  const current = s.length ? s[s.length - 1].wpm : 0;
+
+  $('#anCurrent').textContent = current;
+  $('#anBest').textContent = best;
+  $('#anAvg').textContent = avgW;
+  $('#anAcc').textContent = avgA.toFixed(1) + '%';
+  $('#anTime').textContent = fmtMinutes(totals.totalSeconds / 60);
+  $('#anStreak').textContent = App.streak.count || 0;
+  $('#anSessions').textContent = totals.sessions;
+  $('#anWords').textContent = totals.totalWords.toLocaleString();
+
+  lineChart($('#chartWpm'), s.slice(-30).map(x => x.wpm), {});
+  lineChart($('#chartAcc'), s.slice(-30).map(x => x.acc), { color: cssVar('--accent-2') || '#22d3ee', min: 50 });
+  lineChart($('#chartCons'), s.slice(-30).map(x => x.consistency), { color: '#5ce1a5', min: 40 });
+
+  // daily activity (last 14 days)
+  const days = [], vals = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const mins = s.filter(x => x.date.slice(0, 10) === key).reduce((a, x) => a + x.duration, 0) / 60;
+    days.push(d.getDate());
+    vals.push(+mins.toFixed(1));
+  }
+  barChart($('#chartDaily'), days, vals);
+
+  // mistyped keys
+  const keys = weakKeys(8);
+  $('#mistypedKeys').innerHTML = keys.length
+    ? keys.map(k => `<span class="badge amber" style="font-family:var(--font-mono);font-size:15px;padding:8px 13px">${esc(k.k.toUpperCase())} <span style="color:var(--muted);font-size:11px">${(k.rate * 100).toFixed(0)}%</span></span>`).join('')
+    : '<span class="hint">Not enough data yet.</span>';
+
+  // slowest words
+  const wordTimes = {};
+  s.slice(-40).forEach(sess => {});
+  $('#slowWords').innerHTML = App.sessions.length
+    ? '<span class="hint">Slow-word analysis builds up as you practise more. Keep typing!</span>'
+    : '<span class="hint">No data yet.</span>';
+
+  // best / worst
+  if (s.length) {
+    const sorted = s.slice().sort((a, b) => b.wpm - a.wpm);
+    const b = sorted[0], w = sorted[sorted.length - 1];
+    $('#bestWorst').innerHTML = `
+      <div class="report-rows">
+        <div class="report-row"><span>🏆 Best</span><b>${b.wpm} WPM · ${b.acc.toFixed(1)}%</b></div>
+        <div class="report-row"><span>🐢 Slowest</span><b>${w.wpm} WPM · ${w.acc.toFixed(1)}%</b></div>
+        <div class="report-row"><span>Peak consistency</span><b>${Math.max(...s.map(x => x.consistency))}%</b></div>
+        <div class="report-row"><span>Sessions</span><b>${s.length}</b></div>
+      </div>`;
+  } else {
+    $('#bestWorst').innerHTML = '<span class="hint">No sessions recorded yet.</span>';
+  }
+
+  // AI coach
+  const lines = [];
+  if (s.length >= 2) {
+    const recent = s.slice(-5).map(x => x.wpm);
+    const older = s.slice(-10, -5).map(x => x.wpm);
+    if (older.length) {
+      const change = ((avg(recent) - avg(older)) / (avg(older) || 1)) * 100;
+      lines.push(change >= 0
+        ? `Your average speed increased by <b>${change.toFixed(1)}%</b> over your last five sessions. Whatever you're doing, keep doing it.`
+        : `Your average speed dropped by <b>${Math.abs(change).toFixed(1)}%</b> recently. Try shorter sessions with full focus.`);
+    }
+    lines.push(avgA >= 97
+      ? `Accuracy is excellent at <b>${avgA.toFixed(1)}%</b>. You can safely push speed now.`
+      : avgA >= 94
+        ? `Accuracy is solid at <b>${avgA.toFixed(1)}%</b>, but there's room. Try a 3-minute accuracy drill today.`
+        : `Accuracy is at <b>${avgA.toFixed(1)}%</b> — slow down by 15% and focus purely on precision for a week.`);
+  } else {
+    lines.push('Complete at least two sessions so I can analyse your trends and build a training plan.');
+  }
+  if (keys.length) {
+    lines.push(`You mistype <b>${keys.slice(0, 3).map(k => k.k.toUpperCase()).join(', ')}</b> more than any other keys. I've prepared a personalized drill for you.`);
+  }
+  if (App.streak.count >= 3) {
+    lines.push(`You're on a <b>${App.streak.count}-day streak</b>. Consistency matters more than intensity — keep it alive.`);
+  }
+  lines.push('Recommended next session: <b>' + (avgA < 96 ? '3-minute accuracy drill' : '2-minute speed sprint') + '</b>.');
+
+  $('#coachReport').innerHTML = lines.map(l =>
+    `<div style="display:flex;gap:12px;align-items:flex-start">
+      <span style="color:var(--accent);font-size:16px;line-height:1.4">▸</span>
+      <p style="font-size:14.5px;line-height:1.7;color:var(--text-dim)">${l}</p>
+    </div>`).join('');
+}
+
+/* export */
+$('#exportBtn').addEventListener('click', () => {
+  const data = {
+    exported: new Date().toISOString(),
+    user: App.user ? { name: App.user.name, username: App.user.username, joined: App.user.joined } : null,
+    settings: App.settings,
+    sessions: App.sessions,
+    keyStats: App.keyStats,
+    unlocked: App.unlocked,
+    streak: App.streak,
+    totals: userTotals()
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'typezen-data.json';
+  a.click();
+  toast('Data exported', 'Your statistics have been downloaded.', '⬇️');
+});
+
+/* ---------------------------------------------------------------
+   24. LEADERBOARD
+   --------------------------------------------------------------- */
+let lbFilter = 'global';
+$$('#lbFilters .chip').forEach(c => c.addEventListener('click', () => {
+  $$('#lbFilters .chip').forEach(x => x.classList.remove('active'));
+  c.classList.add('active');
+  lbFilter = c.dataset.lb;
+  renderLeaderboard();
+}));
+function renderLeaderboard() {
+  const best = App.sessions.length ? Math.max(...App.sessions.map(s => s.wpm)) : 0;
+  const bestAcc = App.sessions.length ? Math.max(...App.sessions.map(s => s.acc)) : 0;
+  let list = FAKE_LB.slice();
+
+  if (lbFilter === 'country' && App.user && App.user.country) {
+    list = list.filter(x => true);
+  }
+  if (lbFilter === 'friends') {
+    list = list.slice(0, 6);
+  }
+  if (lbFilter === 'weekly') {
+    list = list.map(x => ({ ...x, wpm: Math.round(x.wpm * 0.94), tests: Math.round(x.tests * 0.12) }));
+  }
+
+  const me = {
+    name: (App.user ? App.user.username : 'You') + ' (you)',
+    country: App.user && App.user.country ? countryFlag(App.user.country) : '🏳️',
+    wpm: best,
+    acc: bestAcc,
+    tests: App.sessions.length,
+    isMe: true
+  };
+  list.push(me);
+  list.sort((a, b) => b.wpm - a.wpm);
+
+  $('#lbBody').innerHTML = list.map((u, i) => `
+    <tr class="${u.isMe ? 'me' : ''}">
+      <td style="font-family:var(--font-mono);font-weight:800;color:${i < 3 ? 'var(--accent)' : 'var(--muted)'}">
+        ${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+      </td>
+      <td>${esc(u.name)}</td>
+      <td style="color:var(--muted)">${u.country}</td>
+      <td style="text-align:right;font-family:var(--font-mono);font-weight:700">${u.wpm || 0}</td>
+      <td style="text-align:right;font-family:var(--font-mono)">${(u.acc || 0).toFixed(1)}%</td>
+      <td style="text-align:right;color:var(--muted)">${u.tests || 0}</td>
+    </tr>`).join('');
+}
+function countryFlag(country) {
+  const map = {
+    india: '🇮🇳', 'united states': '🇺🇸', usa: '🇺🇸', 'united kingdom': '🇬🇧', uk: '🇬🇧',
+    bangladesh: '🇧🇩', japan: '🇯🇵', germany: '🇩🇪', france: '🇫🇷', canada: '🇨🇦',
+    australia: '🇦🇺', brazil: '🇧🇷', spain: '🇪🇸', china: '🇨🇳'
+  };
+  return map[String(country).toLowerCase()] || '🏳️';
+}
+
+/* ---------------------------------------------------------------
+   25. PROFILE
+   --------------------------------------------------------------- */
+function renderProfile() {
+  const root = $('#profileRoot');
+  if (!App.user) {
+    root.innerHTML = `
+      <div class="empty" style="max-width:520px;margin:60px auto">
+        <span class="big">👤</span>
+        <h3 style="margin-bottom:10px;color:var(--text)">No profile yet</h3>
+        <p style="margin-bottom:20px">Create a free local account to save your name, streak and achievements.</p>
+        <button class="btn primary" id="profReg">Create Account</button>
+      </div>`;
+    $('#profReg').onclick = () => openAuth('register');
+    return;
+  }
+  const totals = userTotals();
+  const best = App.sessions.length ? Math.max(...App.sessions.map(s => s.wpm)) : 0;
+  const avgW = Math.round(avg(App.sessions.map(s => s.wpm))) || 0;
+  const bestAcc = App.sessions.length ? Math.max(...App.sessions.map(s => s.acc)) : 0;
+  const unlockedCount = Object.keys(App.unlocked).length;
+  const initial = App.user.name.charAt(0).toUpperCase();
+
+  root.innerHTML = `
+    <div class="card" style="margin-bottom:20px">
+      <div class="row" style="gap:22px;align-items:center">
+        <div style="width:84px;height:84px;border-radius:24px;display:grid;place-items:center;font-size:34px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent-2))">${esc(initial)}</div>
+        <div style="flex:1">
+          <h2 style="font-size:26px;letter-spacing:-.02em">${esc(App.user.name)}</h2>
+          <p class="hint" style="margin-top:5px">@${esc(App.user.username)} · ${esc(App.user.country || '—')} · Joined ${new Date(App.user.joined).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</p>
+          <div class="row" style="margin-top:12px">
+            <span class="badge purple">🔥 ${App.streak.count || 0} day streak</span>
+            <span class="badge green">🏆 ${unlockedCount}/${ACHIEVEMENTS.length} achievements</span>
+            <span class="badge amber">🎯 Goal: ${App.settings.goalWpm} WPM</span>
+          </div>
+        </div>
+        <button class="btn" id="editProfile">Edit Profile</button>
+      </div>
+    </div>
+
+    <div class="grid g4" style="margin-bottom:20px">
+      <div class="stat"><b>${best}</b><span>Best WPM</span></div>
+      <div class="stat"><b>${avgW}</b><span>Average WPM</span></div>
+      <div class="stat"><b>${bestAcc.toFixed(1)}%</b><span>Best Accuracy</span></div>
+      <div class="stat"><b>${totals.totalWords.toLocaleString()}</b><span>Words Typed</span></div>
+    </div>
+
+    <div class="grid g4" style="margin-bottom:20px">
+      <div class="stat"><b>${fmtMinutes(totals.totalSeconds / 60)}</b><span>Practice Time</span></div>
+      <div class="stat"><b>${totals.sessions}</b><span>Total Sessions</span></div>
+      <div class="stat"><b>${App.bestGameScore}</b><span>Best Game Score</span></div>
+      <div class="stat"><b>${App.racesWon || 0}</b><span>Races Won</span></div>
+    </div>
+
+    <div class="card">
+      <h3 style="font-size:16px;margin-bottom:18px">🏆 All Achievements</h3>
+      <div class="grid g3">
+        ${ACHIEVEMENTS.map(a => {
+          const un = !!App.unlocked[a.id];
+          return `<div class="ach ${un ? 'unlocked' : 'locked'}">
+            <div class="ico">${a.icon}</div>
+            <div><b>${a.name}</b><small>${a.desc}</small></div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
+
+  $('#editProfile').onclick = () => {
+    const name = prompt('Your name:', App.user.name);
+    if (name === null) return;
+    const country = prompt('Your country:', App.user.country || '');
+    const goal = prompt('Your WPM goal:', App.settings.goalWpm);
+    App.user.name = name || App.user.name;
+    App.user.country = country === null ? App.user.country : country;
+    App.settings.goalWpm = parseInt(goal, 10) || App.settings.goalWpm;
+    saveAll(); refreshAuthUI(); renderProfile();
+    toast('Profile updated', '', '✅');
+  };
+}
+
+/* ---------------------------------------------------------------
+   26. SETTINGS
+   --------------------------------------------------------------- */
+function renderSettings() {
+  const root = $('#settingsRoot');
+  const s = App.settings;
+  const themes = [
+    { id: 'dark', name: 'Dark', swatch: '#111726' },
+    { id: 'light', name: 'Light', swatch: '#ffffff' },
+    { id: 'oled', name: 'OLED', swatch: '#000000' },
+    { id: 'nord', name: 'Nord', swatch: '#3b4252' }
+  ];
+  const accents = ['#7c5cff', '#22d3ee', '#4ee6a8', '#ff6b8a', '#ffb648', '#e879f9'];
+
+  root.innerHTML = `
+    <div class="card">
+      <h3 style="font-size:16px;margin-bottom:18px">🎨 Appearance</h3>
+      <div class="field">
+        <label>Theme</label>
+        <div class="chips" id="setThemes">
+          ${themes.map(t => `<span class="chip ${s.theme === t.id ? 'active' : ''}" data-theme="${t.id}">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${t.swatch};border:1px solid rgba(128,128,128,.4);margin-right:7px;vertical-align:middle"></span>${t.name}
+          </span>`).join('')}
+        </div>
+      </div>
+      <div class="field">
+        <label>Accent color</label>
+        <div class="chips" id="setAccents">
+          ${accents.map(a => `<span class="chip ${s.accent === a ? 'active' : ''}" data-accent="${a}" style="padding:8px 14px">
+            <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${a}"></span>
+          </span>`).join('')}
+        </div>
+      </div>
+      <div class="field">
+        <label>Typing font size — <b id="fsVal">${s.fontSize}px</b></label>
+        <input type="range" min="18" max="44" step="2" value="${s.fontSize}" id="setFontSize" />
+      </div>
+      <div class="row">
+        <label style="display:flex;align-items:center;gap:9px;color:var(--text-dim);font-size:14px;margin:0">
+          <input type="checkbox" id="setKeyboard" ${s.showKeyboard ? 'checked' : ''} style="width:auto" /> Show virtual keyboard
+        </label>
+        <label style="display:flex;align-items:center;gap:9px;color:var(--text-dim);font-size:14px;margin:0">
+          <input type="checkbox" id="setSound" ${s.sound ? 'checked' : ''} style="width:auto" /> Key sounds
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="font-size:16px;margin-bottom:18px">⌨️ Typing</h3>
+      <div class="grid g2">
+        <div class="field">
+          <label>Default duration</label>
+          <select id="setDuration">
+            ${[15, 30, 60, 120, 300, 600].map(v => `<option value="${v}" ${s.defaultDuration === v ? 'selected' : ''}>${v < 60 ? v + ' seconds' : v / 60 + ' minutes'}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Default language</label>
+          <select id="setLanguage">
+            <option value="english" ${s.language === 'english' ? 'selected' : ''}>English</option>
+            <option value="bengali" ${s.language === 'bengali' ? 'selected' : ''}>বাংলা (Bengali)</option>
+            <option value="hindi" ${s.language === 'hindi' ? 'selected' : ''}>हिन्दी (Hindi)</option>
+            <option value="spanish" ${s.language === 'spanish' ? 'selected' : ''}>Español</option>
+            <option value="french" ${s.language === 'french' ? 'selected' : ''}>Français</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>WPM goal — <b id="goalVal">${s.goalWpm} WPM</b></label>
+        <input type="range" min="20" max="160" step="5" value="${s.goalWpm}" id="setGoal" />
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="font-size:16px;margin-bottom:18px">🔔 Notifications</h3>
+      <label style="display:flex;align-items:center;gap:9px;color:var(--text-dim);font-size:14px;margin-bottom:12px">
+        <input type="checkbox" id="setDailyReminder" ${s.dailyReminder ? 'checked' : ''} style="width:auto" /> Daily practice reminder
+      </label>
+      <label style="display:flex;align-items:center;gap:9px;color:var(--text-dim);font-size:14px;margin:0">
+        <input type="checkbox" id="setNotifSound" ${s.notifSound ? 'checked' : ''} style="width:auto" /> Achievement notification sound
+      </label>
+    </div>
+
+    <div class="card">
+      <h3 style="font-size:16px;margin-bottom:18px">🔒 Privacy</h3>
+      <label style="display:flex;align-items:center;gap:9px;color:var(--text-dim);font-size:14px;margin-bottom:12px">
+        <input type="checkbox" id="setPublic" ${s.publicProfile ? 'checked' : ''} style="width:auto" /> Public profile
+      </label>
+      <label style="display:flex;align-items:center;gap:9px;color:var(--text-dim);font-size:14px;margin:0">
+        <input type="checkbox" id="setLbVisible" ${s.leaderboardVisible ? 'checked' : ''} style="width:auto" /> Show me on leaderboards
+      </label>
+    </div>
+
+    <div class="card">
+      <h3 style="font-size:16px;margin-bottom:18px">💾 Data</h3>
+      <div class="row">
+        <button class="btn" id="setExport">⬇ Export statistics</button>
+        <button class="btn" id="setImportBtn">⬆ Import data</button>
+        <input type="file" id="setImport" accept=".json" style="display:none" />
+        <button class="btn danger" id="setReset">🗑 Reset all data</button>
+      </div>
+      <p class="hint" style="margin-top:14px">All your data lives in this browser's local storage. Nothing is uploaded anywhere.</p>
+    </div>
+  `;
+
+  $$('#setThemes .chip').forEach(c => c.addEventListener('click', () => {
+    s.theme = c.dataset.theme; saveAll(); applySettings(); renderSettings();
+  }));
+  $$('#setAccents .chip').forEach(c => c.addEventListener('click', () => {
+    s.accent = c.dataset.accent; saveAll(); applySettings(); renderSettings();
+  }));
+  $('#setFontSize').addEventListener('input', e => {
+    s.fontSize = +e.target.value; $('#fsVal').textContent = s.fontSize + 'px'; applySettings();
+  });
+  $('#setFontSize').addEventListener('change', saveAll);
+  $('#setGoal').addEventListener('input', e => {
+    s.goalWpm = +e.target.value; $('#goalVal').textContent = s.goalWpm + ' WPM';
+  });
+  $('#setGoal').addEventListener('change', saveAll);
+  $('#setKeyboard').addEventListener('change', e => { s.showKeyboard = e.target.checked; saveAll(); applySettings(); });
+  $('#setSound').addEventListener('change', e => { s.sound = e.target.checked; saveAll(); applySettings(); });
+  $('#setDuration').addEventListener('change', e => { s.defaultDuration = +e.target.value; saveAll(); });
+  $('#setLanguage').addEventListener('change', e => { s.language = e.target.value; saveAll(); $('#langSelect').value = e.target.value; });
+  $('#setDailyReminder').addEventListener('change', e => { s.dailyReminder = e.target.checked; saveAll(); });
+  $('#setNotifSound').addEventListener('change', e => { s.notifSound = e.target.checked; saveAll(); });
+  $('#setPublic').addEventListener('change', e => { s.publicProfile = e.target.checked; saveAll(); });
+  $('#setLbVisible').addEventListener('change', e => { s.leaderboardVisible = e.target.checked; saveAll(); });
+  $('#setExport').addEventListener('click', () => $('#exportBtn').click());
+  $('#setImportBtn').addEventListener('click', () => $('#setImport').click());
+  $('#setImport').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        if (d.sessions) App.sessions = d.sessions;
+        if (d.keyStats) App.keyStats = d.keyStats;
+        if (d.unlocked) App.unlocked = d.unlocked;
+        if (d.streak) App.streak = d.streak;
+        if (d.settings) { App.settings = Object.assign(App.settings, d.settings); }
+        saveAll(); applySettings(); renderSettings();
+        toast('Data imported', 'Your statistics were restored.', '⬆️');
+      } catch (err) { toast('Import failed', 'That file could not be read.', '⚠️'); }
+    };
+    reader.readAsText(file);
+  });
+  $('#setReset').addEventListener('click', () => {
+    if (!confirm('This will permanently delete all sessions, achievements and settings. Continue?')) return;
+    ['user','settings','sessions','keyStats','unlocked','streak','library','lessonProgress','bestGameScore','racesWon']
+      .forEach(k => DB.del(k));
+    location.reload();
+  });
+}
+
+/* ---------------------------------------------------------------
+   27. INIT
+   --------------------------------------------------------------- */
+function init() {
+  $('#year').textContent = new Date().getFullYear();
+  applySettings();
+  refreshAuthUI();
+  buildKeyboard();
+  renderLibrary();
+  updateTestSummary();
+  renderLanding();
+  updateWeakKeys();
+
+  $('#langSelect').value = App.settings.language;
+
+  // restore last practice config
+  setModeUI(App.settings.defaultMode || 'time');
+  Typing.lastCfg = {
+    mode: App.settings.defaultMode || 'time',
+    duration: App.settings.defaultDuration || 60,
+    wordTarget: 25,
+    language: App.settings.language
+  };
+  Typing.load(Typing.lastCfg);
+
+  // initial route
+  const hash = (location.hash || '').replace('#', '');
+  go(VIEWS.includes(hash) ? hash : 'landing');
+
+  // redraw charts on resize
+  let rt;
+  window.addEventListener('resize', () => {
+    clearTimeout(rt);
+    rt = setTimeout(() => {
+      if ($('#view-landing').classList.contains('active')) renderLanding();
+      if ($('#view-analytics').classList.contains('active')) renderAnalytics();
+      if ($('#view-dashboard').classList.contains('active')) renderDashboard();
+    }, 200);
+  });
+
+  // daily reminder
+  if (App.settings.dailyReminder && App.user && App.streak.last !== todayKey()) {
+    setTimeout(() => toast('Keep your streak alive!', 'You haven\'t practised today yet.', '🔥'), 1600);
+  }
+
+  // welcome
+  if (!localStorage.getItem('tz:seen')) {
+    DB.set('seen', true);
+    setTimeout(() => toast('Welcome to TypeZen', 'Press any key on the typing area to begin. Tab restarts.', '⌨️'), 900);
+  }
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+else init();
+
+})();
+</script>
+</body>
+</html>
